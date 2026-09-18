@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --nav-height: 4.5rem;
+
+    /* Written by the seasonal bridges as the scroll morphs one palette into
+       the next. Declared here so the texture renders before GSAP runs. */
+    --knit-yarn: #a0db6b;
+    --knit-shade: #7fbc4b;
+    --knit-ground: #fee9ea;
+    --thread-color: #a0db6b;
+    --bridge-ground: #fee9ea;
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: var(--nav-height);
+  }
+
+  body {
+    @apply bg-blush font-sans text-ink antialiased;
+    font-feature-settings: 'kern' 1, 'liga' 1;
+    text-rendering: optimizeLegibility;
+    /* Guards against horizontal overflow from the oversized editorial type
+       and the full-bleed transitions (plan §37). */
+    overflow-x: clip;
+  }
+
+  ::selection {
+    @apply bg-hotpink text-cream;
+  }
+
+  :focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
+
+@layer components {
+  /*
+   * Scroll reveals. The transition lives in CSS; JavaScript only flips
+   * `data-visible`. Every hiding rule is scoped to `[data-js]`, set by the
+   * inline bootstrap in the layout — if scripts fail, nothing is hidden.
+   */
+  [data-js] [data-reveal] {
+    opacity: 0;
+    transform: translateY(22px);
+    transition:
+      opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  [data-js] [data-reveal='none'] {
+    transform: none;
+  }
+  [data-js] [data-reveal][data-visible='true'] {
+    opacity: 1;
+    transform: none;
+  }
+
+  [data-js] [data-reveal-line] {
+    transform: translateY(110%);
+    transition: transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  [data-js] [data-reveal-line][data-visible='true'] {
+    transform: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-js] [data-reveal],
+    [data-js] [data-reveal-line] {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+  }
+
+  .label {
+    @apply font-sans text-micro font-medium uppercase tracking-label;
+  }
+
+  .shell {
+    @apply mx-auto w-full max-w-editorial px-gutter;
+  }
+
+  /* Editorial link: the underline grows from the left. */
+  .link-underline {
+    @apply relative inline-block;
+  }
+  .link-underline::after {
+    content: '';
+    @apply absolute -bottom-1 left-0 h-[2px] w-full origin-right scale-x-0 rounded-full bg-current transition-transform duration-500 ease-editorial;
+  }
+  .link-underline:hover::after,
+  .link-underline:focus-visible::after {
+    @apply origin-left scale-x-100;
+  }
+}
+
+@layer utilities {
+  .hide-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Height of a seasonal bridge. Shorter on touch so the pinned stretch never
+     becomes a scroll trap (plan §10, §37). */
+  .bridge-height {
+    height: 150vh;
+  }
+  @media (min-width: 1024px) {
+    .bridge-height {
+      height: 210vh;
+    }
+  }
+}

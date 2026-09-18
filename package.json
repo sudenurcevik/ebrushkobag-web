@@ -1,0 +1,27 @@
+{
+  "name": "ebrushkobag-seasonal",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start -p 3001",
+    "typecheck": "tsc --noEmit",
+    "assets:manifest": "curl -fsS http://localhost:3001/api/asset-manifest -o docs/ASSET-MANIFEST.md && echo 'docs/ASSET-MANIFEST.md güncellendi'"
+  },
+  "dependencies": {
+    "gsap": "^3.13.0",
+    "next": "15.5.3",
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "@types/react": "^19.1.9",
+    "@types/react-dom": "^19.1.7",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.3"
+  }
+}

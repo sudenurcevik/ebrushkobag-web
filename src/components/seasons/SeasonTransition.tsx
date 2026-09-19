@@ -21,12 +21,16 @@ import { ThreadPath } from './ThreadPath';
  *
  * Choreography, as scroll progress through the section:
  *
- *   0–15%    outgoing season still whole
- *   15–34%   the thread draws itself in
- *   30–52%   the camera pushes into the product's textile
- *   50–70%   fullscreen macro; the palette morphs
- *   70–84%   the thread returns in the new colour and underlines the new name
- *   82–100%  zoom back out into the next season's product
+ *   0–12%    outgoing season still whole
+ *   12–44%   the thread draws itself in, all the way across the frame
+ *   28–56%   the camera pushes into the product's textile, softening as it goes
+ *   50–72%   fullscreen macro; the palette morphs on the same unbroken strand
+ *   70–88%   the new name arrives and the thread stitches a line beneath it
+ *   84–100%  zoom back out, sharpening into the next season's product
+ *
+ * The strand is drawn once and never re-drawn. An earlier cut had it leave the
+ * frame and come back, which read as two threads rather than one continuing —
+ * the whole point of the section is that it is the *same* yarn.
  *
  * GSAP owns this section and nothing else on the page owns it too (plan §34):
  * transforms are scrubbed by a single timeline, and colour — which GSAP cannot
@@ -70,6 +74,7 @@ export function SeasonTransition({
       const title = scope.querySelector<HTMLElement>('[data-title]');
       const whisper = scope.querySelector<HTMLElement>('[data-whisper]');
       const incoming = scope.querySelector<HTMLElement>('[data-incoming]');
+      const underline = scope.querySelector<SVGPathElement>('[data-underline]');
       const strands = gsap.utils.toArray<SVGPathElement>('[data-thread]', scope);
       if (!stage || !outgoing || !macro || !threadWrap || !title || !incoming) return;
 
@@ -84,7 +89,9 @@ export function SeasonTransition({
       gsap.set(threadWrap, { opacity: 0 });
       gsap.set(title, { opacity: 0, y: 40 });
       gsap.set(whisper, { opacity: 0 });
-      gsap.set(incoming, { opacity: 0, scale: 3 });
+      gsap.set(outgoing, { filter: 'blur(0px)' });
+      gsap.set(incoming, { opacity: 0, scale: 3, filter: 'blur(10px)' });
+      if (underline) gsap.set(underline, { strokeDasharray: 300, strokeDashoffset: 300 });
 
       const timeline = gsap.timeline({
         defaults: { ease: 'none' },
@@ -92,12 +99,14 @@ export function SeasonTransition({
           trigger: scope,
           start: 'top top',
           end: 'bottom bottom',
-          scrub: 0.6,
+          // A full second of catch-up: the section is meant to feel heavier and
+          // slower than the rest of the page, and the smoothing is most of that.
+          scrub: 1,
           // Colour is written straight to CSS variables: one style write per
           // frame, no re-render, and arbitrary multi-stop morphs.
           onUpdate: (self) => {
             const p = self.progress;
-            stage.style.setProperty('--thread-color', sampleStops(bridge.threadStops, phase(p, 0.1, 0.9)));
+            stage.style.setProperty('--thread-color', sampleStops(bridge.threadStops, phase(p, 0.12, 0.88)));
             stage.style.setProperty('--bridge-ground', sampleStops(bridge.groundStops, phase(p, 0.3, 0.8)));
 
             const knit = phase(p, 0.45, 0.78);
@@ -108,35 +117,36 @@ export function SeasonTransition({
         },
       });
 
-      // 15–34% — the thread arrives, drawing itself from the edge of the frame.
       timeline
-        .to(threadWrap, { opacity: 1, duration: 0.04 }, 0.15)
-        .to(strands, { strokeDashoffset: 0, duration: 0.19 }, 0.15)
+        // 12–44% — the thread arrives and finishes. A generous window: the draw
+        // completing is the promise the rest of the section is built on.
+        .to(threadWrap, { opacity: 1, duration: 0.05 }, 0.1)
+        .to(strands, { strokeDashoffset: 0, duration: 0.32, ease: 'power1.out' }, 0.12)
 
-        // 30–52% — into the textile. The bag stops being a bag.
-        .to(outgoing, { scale: 3.1, duration: 0.24 }, 0.3)
-        .to(outgoing, { opacity: 0, duration: 0.1 }, 0.44)
-        .to(macro, { opacity: 1, duration: 0.14 }, 0.36)
-        .to(macro, { scale: 1, duration: 0.3 }, 0.36)
+        // 28–56% — into the textile. The bag stops being a bag, and goes soft as
+        // it grows, the way a real lens loses it on the way in.
+        .to(outgoing, { scale: 3.1, duration: 0.3, ease: 'power1.in' }, 0.28)
+        .to(outgoing, { filter: 'blur(9px)', duration: 0.22 }, 0.34)
+        .to(outgoing, { opacity: 0, duration: 0.12 }, 0.46)
+        .to(macro, { opacity: 1, duration: 0.14 }, 0.38)
+        .to(macro, { scale: 1, duration: 0.34, ease: 'power1.out' }, 0.38)
 
-        // 50–70% — the macro world; palette morphs via onUpdate above.
-        .to(whisper, { opacity: 1, duration: 0.06 }, 0.52)
+        // 50–72% — the macro world; the palette morphs via onUpdate above while
+        // the same unbroken strand lies across it.
+        .to(whisper, { opacity: 1, duration: 0.05 }, 0.5)
         .to(macroPhoto, { opacity: 1, duration: 0.12 }, 0.54)
-        .to(whisper, { opacity: 0, duration: 0.05 }, 0.66)
+        .to(whisper, { opacity: 0, duration: 0.05 }, 0.68)
 
-        // The strand leaves and comes back wearing the next season.
-        .to(strands, { strokeDashoffset: -length, duration: 0.12 }, 0.58)
-        .set(strands, { strokeDashoffset: length }, 0.7)
-        .to(strands, { strokeDashoffset: 0, duration: 0.12 }, 0.7)
+        // 70–88% — the new chapter arrives and the thread stitches under it.
+        .to(title, { opacity: 1, y: 0, duration: 0.1, ease: 'power2.out' }, 0.7)
+        .to(underline, { strokeDashoffset: 0, duration: 0.12, ease: 'power1.out' }, 0.76)
 
-        // 70–84% — the new chapter name is knitted in.
-        .to(title, { opacity: 1, y: 0, duration: 0.1 }, 0.72)
-
-        // 82–100% — back out, into the next season's product.
-        .to(macro, { scale: 0.78, opacity: 0, duration: 0.14 }, 0.85)
-        .to(threadWrap, { opacity: 0, duration: 0.06 }, 0.86)
-        .to(incoming, { opacity: 1, duration: 0.09 }, 0.85)
-        .to(incoming, { scale: 1, duration: 0.15 }, 0.85)
+        // 84–100% — back out, sharpening into the next season's product.
+        .to(threadWrap, { opacity: 0, duration: 0.08 }, 0.8)
+        .to(macro, { scale: 0.82, opacity: 0, duration: 0.16, ease: 'power1.in' }, 0.84)
+        .to(incoming, { opacity: 1, duration: 0.1 }, 0.84)
+        .to(incoming, { scale: 1, duration: 0.16, ease: 'power1.out' }, 0.84)
+        .to(incoming, { filter: 'blur(0px)', duration: 0.14 }, 0.86)
         .to(title, { opacity: 0, y: -24, duration: 0.07 }, 0.93);
 
       setReady(true);
@@ -209,7 +219,10 @@ export function SeasonTransition({
           data-title
           className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-4 px-gutter text-center"
         >
-          <span className="label" style={{ color: to.accent }}>
+          {/* Ink, not the accent: by this point the field is the incoming
+              season's own yarn, and an accent-coloured label disappears into
+              it — summer's yellow on summer's yellow knit, silver on silver. */}
+          <span className="label" style={{ color: to.ink, opacity: 0.75 }}>
             {to.index} / {to.labelEn}
           </span>
           <span
@@ -218,6 +231,23 @@ export function SeasonTransition({
           >
             {to.label}
           </span>
+
+          {/* The same thread, stitching a line under the new name (plan §15) —
+              a short run of back-stitch, not a traced outline of the letters. */}
+          <svg
+            viewBox="0 0 300 16"
+            className="mt-2 h-4 w-[min(70vw,22rem)]"
+            fill="none"
+            aria-hidden
+          >
+            <path
+              d="M 4 9 C 40 2, 70 14, 106 8 C 142 2, 170 14, 206 8 C 240 2, 268 13, 296 8"
+              stroke="var(--thread-color)"
+              strokeWidth="5"
+              strokeLinecap="round"
+              data-underline
+            />
+          </svg>
         </div>
 
         {/* 5 — one line, deep inside the texture */}

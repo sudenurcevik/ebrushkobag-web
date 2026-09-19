@@ -12,6 +12,14 @@ import { forwardRef } from 'react';
  * length of yarn lying across the frame, not as a decorative squiggle. Drawing
  * is `stroke-dashoffset` driven by scroll progress, and the colour is a CSS
  * variable so the strand can change season mid-draw.
+ *
+ * Deliberately NOT `vector-effect: non-scaling-stroke`. That keeps the stroke a
+ * constant pixel width, but it moves the dash pattern into screen space as well
+ * — so a dash array measured with `getTotalLength()` (user units) no longer
+ * spans the path, and the strand can never finish drawing. Letting the stroke
+ * scale with the viewBox keeps dash and path in the same coordinate system, and
+ * `slice` scaling happens to land the width between 14px and 21px across every
+ * screen this site sees, which is what §37 asks for anyway.
  */
 export const ThreadPath = forwardRef<SVGPathElement, { className?: string; id: string }>(
   function ThreadPath({ className = '', id }, ref) {
@@ -41,9 +49,8 @@ export const ThreadPath = forwardRef<SVGPathElement, { className?: string; id: s
                C 775 205, 700 400, 830 395
                C 930 399, 980 300, 1060 250"
             stroke="var(--thread-color)"
-            strokeWidth="14"
+            strokeWidth="11"
             strokeLinecap="round"
-            vectorEffect="non-scaling-stroke"
             data-thread="strand"
           />
           {/* Fibre highlight, offset slightly so the strand reads as round. */}
@@ -55,9 +62,8 @@ export const ThreadPath = forwardRef<SVGPathElement, { className?: string; id: s
                C 930 395, 980 296, 1060 246"
             stroke="#FFFFFF"
             strokeOpacity="0.32"
-            strokeWidth="3"
+            strokeWidth="2.4"
             strokeLinecap="round"
-            vectorEffect="non-scaling-stroke"
             data-thread="highlight"
           />
         </g>

@@ -98,6 +98,9 @@ const config: Config = {
         // No fill mode: if animations never run, the element stays visible.
         'fade-rise': 'fade-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1)',
         'scroll-hint': 'scroll-hint 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite',
+        // The logo is a ball of yarn; one turn a minute reads as the ball
+        // moving, not as an animation asking to be watched.
+        'spin-slow': 'spin 60s linear infinite',
       },
     },
   },

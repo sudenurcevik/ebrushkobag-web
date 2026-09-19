@@ -2,7 +2,7 @@
 
 > Bu dosya `src/lib/asset-manifest.ts` üzerinden üretilir. Elle düzenlemeyin; mevsim/ürün/katalog verisi değiştiğinde `npm run assets:manifest` ile yenileyin.
 
-Toplam **78 dosya**. Hepsi `public/` altına, tabloda yazan yola birebir aynı adla konur. Eksik dosyalar tasarlanmış yer tutucularla karşılanır, bu yüzden görseller parça parça teslim edilebilir.
+Toplam **82 dosya**. Hepsi `public/` altına, tabloda yazan yola birebir aynı adla konur. Eksik dosyalar tasarlanmış yer tutucularla karşılanır, bu yüzden görseller parça parça teslim edilebilir.
 
 **Kritik** işaretli dosyalar markanın gerçek ürün kimliğini taşır ve uydurulamaz.
 Canlı durumu `npm run dev` çalışırken `/asset-manifest` adresinde görebilirsiniz.
@@ -26,6 +26,17 @@ Sitenin omurgası. Her mevsimin üç karesi var: bölüm görseli, geçişte zoo
 | `/images/seasons/winter/hero.webp` | 2000×2500 | 4:5 | Hayır | Evet | KIŞ — bölüm görseli | Bölümün büyük editoryal karesi. Kadrajın bir kenarı ekrandan taşacak şekilde kullanılıyor. |
 | `/images/seasons/winter/product.webp` | 1800×1800 | 1:1 | Hayır | Evet | KIŞ — geçiş ürünü | Mevsim geçişinde içine zoom yapılan kare. Örgü dokusu net görünmeli; çanta ortalanmış olmalı. |
 | `/images/seasons/winter/macro.webp` | 2400×1600 | 3:2 | Hayır | Evet | KIŞ — makro doku | Geçişin tam ekran olduğu an. İlmeklerin ayırt edildiği çok yakın makro çekim. Dosya yoksa site çizilmiş örgü dokusunu kullanır — ama gerçek doku bu bölümün imzası. |
+
+## Mevsim videoları
+
+Ana sayfadaki film şeridinde oynuyor. Sessiz ve döngüsel; sesli ya da uzun videolar bu bölüm için uygun değil. Gelmediği sürece kare boş kalmaz, film geri sayım görseliyle bekler.
+
+| Dosya | Ölçü | Oran | Şeffaf | Kritik | Nerede | Amaç |
+| --- | --- | --- | --- | --- | --- | --- |
+| `/videos/seasons/spring.mp4` | 1920×1080 | 16:9 | Hayır | — | BAHAR — film şeridi | Sessiz, 6–12 saniyelik döngü. H.264 MP4, 1920×1080, < 5 MB. Kare 3:2 olarak kırpılıyor, bu yüzden önemli şeyler ortada kalsın. Dosya yoksa o kare film başındaki geri sayım görseliyle bekler. |
+| `/videos/seasons/summer.mp4` | 1920×1080 | 16:9 | Hayır | — | YAZ — film şeridi | Sessiz, 6–12 saniyelik döngü. H.264 MP4, 1920×1080, < 5 MB. Kare 3:2 olarak kırpılıyor, bu yüzden önemli şeyler ortada kalsın. Dosya yoksa o kare film başındaki geri sayım görseliyle bekler. |
+| `/videos/seasons/autumn.mp4` | 1920×1080 | 16:9 | Hayır | — | SONBAHAR — film şeridi | Sessiz, 6–12 saniyelik döngü. H.264 MP4, 1920×1080, < 5 MB. Kare 3:2 olarak kırpılıyor, bu yüzden önemli şeyler ortada kalsın. Dosya yoksa o kare film başındaki geri sayım görseliyle bekler. |
+| `/videos/seasons/winter.mp4` | 1920×1080 | 16:9 | Hayır | — | KIŞ — film şeridi | Sessiz, 6–12 saniyelik döngü. H.264 MP4, 1920×1080, < 5 MB. Kare 3:2 olarak kırpılıyor, bu yüzden önemli şeyler ortada kalsın. Dosya yoksa o kare film başındaki geri sayım görseliyle bekler. |
 
 ## Ürün görselleri
 

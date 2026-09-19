@@ -55,31 +55,54 @@ export function SeasonIndicator({ seasons }: { seasons: Season[] }) {
 
   return (
     <>
-      {/* Desktop: quiet vertical index at the right edge. */}
+      {/*
+        Desktop: a narrow index in the right margin — number and rule only, so
+        it fits in the gutter beside a full-width layout instead of forcing the
+        chapters to reserve space for it. The name is always in the accessible
+        name and slides out on hover or keyboard focus.
+      */}
       <nav
         aria-label="Mevsim bölümleri"
         className={[
-          'pointer-events-none fixed right-[max(1.25rem,3vw)] top-1/2 z-40 hidden -translate-y-1/2 lg:block',
+          'fixed right-3 top-1/2 z-40 hidden -translate-y-1/2 lg:block',
           'transition-opacity duration-500 ease-editorial',
-          visible ? 'opacity-100' : 'opacity-0',
+          visible ? 'opacity-100' : 'pointer-events-none opacity-0',
         ].join(' ')}
       >
-        <ol className={visible ? 'pointer-events-auto space-y-4' : 'space-y-4'}>
+        <ol className="space-y-5">
           {seasons.map((season) => {
             const isActive = season.id === active;
             return (
-              <li key={season.id}>
+              <li key={season.id} className="group relative flex justify-end">
                 <a
                   href={`#${season.slug}`}
                   aria-current={isActive ? 'true' : undefined}
-                  className="flex items-center justify-end gap-3 transition-opacity duration-500 ease-editorial"
-                  style={{ color: ink, opacity: isActive ? 1 : 0.35 }}
+                  aria-label={`${season.index} ${season.label}`}
+                  className="flex items-center gap-2 py-1 pl-2 transition-opacity duration-500 ease-editorial"
+                  style={{
+                    color: ink,
+                    opacity: isActive ? 1 : 0.4,
+                    // The chapter image now bleeds to the edge behind this, so
+                    // the marks carry a halo in the page colour to stay legible
+                    // over whatever photograph is underneath.
+                    textShadow: `0 0 10px ${ground}, 0 0 4px ${ground}`,
+                    filter: `drop-shadow(0 0 6px ${ground})`,
+                  }}
                 >
-                  <span className="label">{season.index}</span>
-                  <span className="text-[0.6875rem] uppercase tracking-label">{season.label}</span>
+                  {/* Slides out of the gutter only while pointed at or focused. */}
+                  <span
+                    className="pointer-events-none absolute right-full mr-2 whitespace-nowrap rounded-full px-3 py-1.5 text-[0.625rem] uppercase tracking-label opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100"
+                    style={{ backgroundColor: ground, color: ink, boxShadow: `0 0 0 1px ${accent}55` }}
+                    aria-hidden
+                  >
+                    {season.label}
+                  </span>
+                  <span className="text-[0.625rem] font-medium tabular-nums tracking-label" aria-hidden>
+                    {season.index}
+                  </span>
                   <span
                     className="block h-[2px] rounded-full transition-all duration-500 ease-editorial"
-                    style={{ width: isActive ? 28 : 12, backgroundColor: isActive ? accent : ink }}
+                    style={{ width: isActive ? 22 : 10, backgroundColor: isActive ? accent : ink }}
                     aria-hidden
                   />
                 </a>

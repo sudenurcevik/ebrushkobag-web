@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'react';
  * transition, so scrolling stays off the JS main thread (plan §35).
  */
 export function useInViewOnce<T extends HTMLElement>(
-  { amount = 0.25, once = true }: { amount?: number; once?: boolean } = {},
+  { amount = 0.15, once = true }: { amount?: number; once?: boolean } = {},
 ): [React.RefObject<T | null>, boolean] {
   const ref = useRef<T>(null);
   const [inView, setInView] = useState(false);
@@ -33,8 +33,14 @@ export function useInViewOnce<T extends HTMLElement>(
           }
         }
       },
-      // Clamped: `amount: 1` on an element taller than the viewport never fires.
-      { threshold: Math.min(amount, 0.9), rootMargin: '0px 0px -5% 0px' },
+      {
+        // Clamped: `amount: 1` on an element taller than the viewport never fires.
+        threshold: Math.min(amount, 0.9),
+        // The root is grown downwards, so an element starts revealing shortly
+        // before it reaches the fold. Text that only begins to appear once it is
+        // already well inside the viewport reads as lag, not as choreography.
+        rootMargin: '0px 0px 18% 0px',
+      },
     );
 
     observer.observe(node);

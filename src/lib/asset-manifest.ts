@@ -84,6 +84,23 @@ export function seasonAssets(): AssetSpec[] {
   return specs;
 }
 
+/** The four clips that play in the home page's film strip. */
+export function seasonVideoAssets(): AssetSpec[] {
+  return SEASONS.map((season) => ({
+    path: season.video.src,
+    width: season.video.width,
+    height: season.video.height,
+    ratio: ratio(season.video.width, season.video.height),
+    transparent: false,
+    usedIn: `${season.label} — film şeridi`,
+    purpose:
+      'Sessiz, 6–12 saniyelik döngü. H.264 MP4, 1920×1080, < 5 MB. Kare 3:2 olarak ' +
+      'kırpılıyor, bu yüzden önemli şeyler ortada kalsın. Dosya yoksa o kare film ' +
+      'başındaki geri sayım görseliyle bekler.',
+    critical: false,
+  }));
+}
+
 export function productAssets(): AssetSpec[] {
   return PRODUCTS.map((product) =>
     fromImage(
@@ -159,6 +176,15 @@ export function assetGroups(): AssetGroup[] {
         'Sitenin omurgası. Her mevsimin üç karesi var: bölüm görseli, geçişte zoom yapılan ürün ' +
         've makro doku. WebP, kalite 80–85.',
       assets: seasonAssets(),
+    },
+    {
+      id: 'videos',
+      title: 'Mevsim videoları',
+      note:
+        'Ana sayfadaki film şeridinde oynuyor. Sessiz ve döngüsel; sesli ya da uzun ' +
+        'videolar bu bölüm için uygun değil. Gelmediği sürece kare boş kalmaz, film ' +
+        'geri sayım görseliyle bekler.',
+      assets: seasonVideoAssets(),
     },
     {
       id: 'products',

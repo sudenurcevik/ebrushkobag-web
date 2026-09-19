@@ -19,6 +19,17 @@ export interface ImageRef {
   required?: boolean;
 }
 
+/** A short silent loop. Played inside the film strip on the home page. */
+export interface VideoRef {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+  /** Optional still shown before the first frame decodes. */
+  poster?: string;
+  required?: boolean;
+}
+
 /** Colours the procedural knit texture is drawn with. */
 export interface KnitPalette {
   /** The yarn itself. */
@@ -66,6 +77,8 @@ export interface Season {
     product: ImageRef;
     macro: ImageRef;
   };
+  /** The clip that plays in this season's frame of the film strip. */
+  video: VideoRef;
 
   /** Product ids featured in this chapter, in order. */
   productIds: string[];

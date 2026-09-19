@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { BRAND } from '@/config/brand';
 import { ctaClasses, ctaStyle } from '@/components/ui/Cta';
-import { Logo } from './Logo';
 
 const NAV_ITEMS = [
   { label: 'Koleksiyon', hash: '#koleksiyon' },
@@ -20,7 +19,14 @@ const NAV_ITEMS = [
  * through every season, so the bar reads as the brand's frame around a changing
  * year rather than as part of any one chapter.
  *
- * "Çantanı Tasarla" never leaves the bar, at any width.
+ * Two deliberate absences at the top of the page:
+ *
+ * - The logo lives in the hero, not here. The bar carries the wordmark only, so
+ *   the mark itself gets one uncontested appearance instead of two competing
+ *   ones.
+ * - "Çantanı Tasarla" only appears once the hero is behind you. While the hero
+ *   is on screen its own large call to action is the single thing to press;
+ *   showing both at once would ask the same question twice.
  */
 export function Navbar({ transparentOnTop = false }: { transparentOnTop?: boolean }) {
   const pathname = usePathname();
@@ -70,11 +76,11 @@ export function Navbar({ transparentOnTop = false }: { transparentOnTop?: boolea
         <nav className="shell flex h-full items-center justify-between gap-4" aria-label="Ana menü">
           <Link
             href="/"
-            className={`flex items-center gap-3 ${tone} transition-colors duration-500`}
+            className={`font-display text-lg font-semibold tracking-[0.2em] ${tone} transition-colors duration-500 sm:text-xl`}
             onClick={() => setMenuOpen(false)}
           >
-            <Logo size={40} priority withWordmark />
-            <span className="sr-only">{BRAND.name} — ana sayfa</span>
+            {BRAND.name}
+            <span className="sr-only"> — ana sayfa</span>
           </Link>
 
           <ul className={`hidden items-center gap-9 md:flex ${tone} transition-colors duration-500`}>
@@ -88,14 +94,21 @@ export function Navbar({ transparentOnTop = false }: { transparentOnTop?: boolea
           </ul>
 
           <div className="flex items-center gap-2">
+            {/* Hidden while the hero owns the call to action; `inert` keeps it
+                out of the tab order too, not just out of sight. */}
             <Link
               href="/atelier"
-              className={ctaClasses('solid', 'sm', 'px-4 sm:px-6')}
-              style={ctaStyle('solid', {
-                accent: solid ? '#FF68C4' : '#FFFBF4',
-                ink: '#241A20',
-                onAccent: solid ? '#FFFBF4' : '#241A20',
-              })}
+              inert={!solid}
+              aria-hidden={!solid}
+              tabIndex={solid ? undefined : -1}
+              className={ctaClasses(
+                'solid',
+                'sm',
+                `px-4 transition-[opacity,transform] duration-500 sm:px-6 ${
+                  solid ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-1 opacity-0'
+                }`,
+              )}
+              style={ctaStyle('solid', { accent: '#FF68C4', ink: '#241A20', onAccent: '#FFFBF4' })}
             >
               <span className="sm:hidden">Tasarla</span>
               <span className="hidden sm:inline">Çantanı Tasarla</span>

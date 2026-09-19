@@ -20,7 +20,7 @@ export function SeasonSection({ season, index }: { season: Season; index: number
     <section
       id={season.slug}
       data-season={season.id}
-      className="relative overflow-hidden pb-section pt-section lg:pr-24 xl:pr-28"
+      className="relative overflow-hidden pb-section pt-section"
       style={{ backgroundColor: season.background, color: season.ink }}
       aria-labelledby={`${season.id}-title`}
     >
@@ -52,7 +52,8 @@ export function SeasonSection({ season, index }: { season: Season; index: number
         >
           <Reveal
             className={flipped ? 'lg:col-span-5 lg:col-start-7' : 'lg:col-span-5'}
-            delay={0.08}
+            delay={0.04}
+            amount={0.12}
           >
             <p className="font-display text-2xl italic leading-snug sm:text-3xl">
               {season.headline}
@@ -71,7 +72,8 @@ export function SeasonSection({ season, index }: { season: Season; index: number
               'flex items-start',
               flipped ? 'lg:col-span-4 lg:col-start-1 lg:row-start-1' : 'lg:col-span-4 lg:col-start-9',
             ].join(' ')}
-            delay={0.16}
+            delay={0.1}
+            amount={0.12}
           >
             <ul className="flex flex-wrap items-center gap-x-4 gap-y-2.5">
               {season.palette.map((swatch) => (
@@ -100,6 +102,9 @@ export function SeasonSection({ season, index }: { season: Season; index: number
           <Reveal
             className={[
               'relative',
+              // Equal bleed on whichever side the frame sits: the chapter
+              // navigator no longer reserves space on the right, so left and
+              // right compositions now mirror each other exactly.
               flipped
                 ? 'lg:col-span-7 lg:col-start-1 lg:-ml-[6vw]'
                 : 'lg:col-span-7 lg:col-start-6 lg:-mr-[6vw]',
@@ -121,8 +126,8 @@ export function SeasonSection({ season, index }: { season: Season; index: number
               'flex flex-wrap gap-2 lg:col-span-4',
               flipped ? 'lg:col-start-9' : 'lg:col-start-1 lg:row-start-1',
             ].join(' ')}
-            delay={0.12}
-            amount={0.3}
+            delay={0.06}
+            amount={0.1}
           >
             {season.mood.map((word) => (
               <span

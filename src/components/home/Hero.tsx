@@ -4,11 +4,15 @@ import { HERO } from '@/data/content';
 import { ctaClasses, ctaStyle } from '@/components/ui/Cta';
 import { EditorialImage } from '@/components/ui/EditorialImage';
 import { RevealLines } from '@/components/ui/Reveal';
+import { HeroLogo } from './HeroLogo';
 import { HeroMedia } from './HeroMedia';
 
 /**
  * The first viewport introduces the brand before the year starts (plan §7).
  * Full bleed, cinematic crop, two lines of type and one action — nothing else.
+ *
+ * The logo lives here rather than in the navigation: one large, slowly turning
+ * appearance on the right, behind the headline.
  */
 export function Hero() {
   return (
@@ -27,9 +31,13 @@ export function Hero() {
         />
       </HeroMedia>
 
-      {/* Two stops only: the type has to hold, the photograph has to breathe. */}
+      <HeroLogo />
+
+      {/* Two stops only: the type has to hold, the photograph has to breathe.
+          Sits above the logo so the mark is washed by the same light as the
+          photograph rather than floating on top of it. */}
       <div
-        className="absolute inset-0 -z-[1] bg-gradient-to-t from-chocolate/85 via-chocolate/20 to-chocolate/40"
+        className="absolute inset-0 z-[2] bg-gradient-to-t from-chocolate/85 via-chocolate/20 to-chocolate/40"
         aria-hidden
       />
 

@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { useInViewOnce } from '@/hooks/useInViewOnce';
 
 type Element = 'div' | 'section' | 'li' | 'figure' | 'p' | 'span' | 'ol' | 'ul';
@@ -21,6 +21,7 @@ export function Reveal({
   direction = 'up',
   amount = 0.25,
   as = 'div',
+  style,
 }: {
   children: ReactNode;
   className?: string;
@@ -28,6 +29,8 @@ export function Reveal({
   direction?: 'up' | 'none';
   amount?: number;
   as?: Element;
+  /** Merged with the stagger delay — for layout values a class cannot express. */
+  style?: CSSProperties;
 }) {
   const [ref, inView] = useInViewOnce<HTMLDivElement>({ amount });
   const Component = as as 'div';
@@ -38,7 +41,7 @@ export function Reveal({
       className={className}
       data-reveal={direction}
       data-visible={inView ? 'true' : 'false'}
-      style={delay ? { transitionDelay: `${delay}s` } : undefined}
+      style={delay ? { ...style, transitionDelay: `${delay}s` } : style}
     >
       {children}
     </Component>

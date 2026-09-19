@@ -4,7 +4,6 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Season, SeasonBridge } from '@/data/types';
-import { phase, sampleStops } from '@/lib/color';
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion';
 import { KnitTexture } from './KnitTexture';
 import { ThreadPath } from './ThreadPath';
@@ -32,10 +31,11 @@ import { ThreadPath } from './ThreadPath';
  * frame and come back, which read as two threads rather than one continuing —
  * the whole point of the section is that it is the *same* yarn.
  *
- * GSAP owns this section and nothing else on the page owns it too (plan §34):
- * transforms are scrubbed by a single timeline, and colour — which GSAP cannot
- * interpolate across an arbitrary stop list — is written to CSS variables in one
- * `onUpdate`. No React state changes while scrolling.
+ * GSAP owns this section and nothing else on the page owns it too (plan §34),
+ * and the whole thing is scrubbed by a single timeline that only ever touches
+ * transform and opacity. Nothing repaints while scrolling: every colour change
+ * is a cross-fade between static layers rather than a value written per frame.
+ * No React state changes while scrolling either.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 export function SeasonTransition({
@@ -75,22 +75,32 @@ export function SeasonTransition({
       const whisper = scope.querySelector<HTMLElement>('[data-whisper]');
       const incoming = scope.querySelector<HTMLElement>('[data-incoming]');
       const underline = scope.querySelector<SVGPathElement>('[data-underline]');
-      const strands = gsap.utils.toArray<SVGPathElement>('[data-thread]', scope);
+      // Only the outgoing strand is drawn by the dash. The incoming one is
+      // already complete and simply fades in over it once the draw is done, so
+      // the dash animation never runs on two full-screen SVGs at once.
+      const drawn = gsap.utils.toArray<SVGPathElement>('[data-thread-layer="from"] [data-thread]', scope);
+      const arrived = gsap.utils.toArray<SVGPathElement>('[data-thread-layer="to"] [data-thread]', scope);
+      const threadTo = scope.querySelector<HTMLElement>('[data-thread-layer="to"]');
+      const knitTo = scope.querySelector<HTMLElement>('[data-knit-to]');
+      const grounds = gsap.utils.toArray<HTMLElement>('[data-ground]', scope);
       if (!stage || !outgoing || !macro || !threadWrap || !title || !incoming) return;
 
-      // Measure the strand once and dash both paths from the same length, so
-      // the fibre highlight draws exactly with the yarn.
-      const strand = strands.find((path) => path.dataset.thread === 'strand');
+      // Measure the strand once and dash every path from the same length, so
+      // shadow, yarn and fibre highlight draw as one.
+      const strand = drawn.find((path) => path.dataset.thread === 'strand');
       const length = strand ? strand.getTotalLength() : 1000;
-      gsap.set(strands, { strokeDasharray: length, strokeDashoffset: length });
+      gsap.set(drawn, { strokeDasharray: length, strokeDashoffset: length });
+      gsap.set(arrived, { strokeDasharray: length, strokeDashoffset: 0 });
 
       gsap.set(macro, { opacity: 0, scale: 1.35 });
       gsap.set(macroPhoto, { opacity: 0 });
       gsap.set(threadWrap, { opacity: 0 });
       gsap.set(title, { opacity: 0, y: 40 });
       gsap.set(whisper, { opacity: 0 });
-      gsap.set(outgoing, { filter: 'blur(0px)' });
-      gsap.set(incoming, { opacity: 0, scale: 3, filter: 'blur(10px)' });
+      gsap.set(threadTo, { opacity: 0 });
+      gsap.set(knitTo, { opacity: 0 });
+      gsap.set(grounds.slice(1), { opacity: 0 });
+      gsap.set(incoming, { opacity: 0, scale: 3 });
       if (underline) gsap.set(underline, { strokeDasharray: 300, strokeDashoffset: 300 });
 
       const timeline = gsap.timeline({
@@ -102,18 +112,6 @@ export function SeasonTransition({
           // A full second of catch-up: the section is meant to feel heavier and
           // slower than the rest of the page, and the smoothing is most of that.
           scrub: 1,
-          // Colour is written straight to CSS variables: one style write per
-          // frame, no re-render, and arbitrary multi-stop morphs.
-          onUpdate: (self) => {
-            const p = self.progress;
-            stage.style.setProperty('--thread-color', sampleStops(bridge.threadStops, phase(p, 0.12, 0.88)));
-            stage.style.setProperty('--bridge-ground', sampleStops(bridge.groundStops, phase(p, 0.3, 0.8)));
-
-            const knit = phase(p, 0.45, 0.78);
-            stage.style.setProperty('--knit-yarn', sampleStops([bridge.knitFrom.yarn, bridge.knitTo.yarn], knit));
-            stage.style.setProperty('--knit-shade', sampleStops([bridge.knitFrom.shade, bridge.knitTo.shade], knit));
-            stage.style.setProperty('--knit-ground', sampleStops([bridge.knitFrom.ground, bridge.knitTo.ground], knit));
-          },
         },
       });
 
@@ -121,21 +119,26 @@ export function SeasonTransition({
         // 12–44% — the thread arrives and finishes. A generous window: the draw
         // completing is the promise the rest of the section is built on.
         .to(threadWrap, { opacity: 1, duration: 0.05 }, 0.1)
-        .to(strands, { strokeDashoffset: 0, duration: 0.32, ease: 'power1.out' }, 0.12)
+        .to(drawn, { strokeDashoffset: 0, duration: 0.32, ease: 'power1.out' }, 0.12)
 
         // 28–56% — into the textile. The bag stops being a bag, and goes soft as
         // it grows, the way a real lens loses it on the way in.
         .to(outgoing, { scale: 3.1, duration: 0.3, ease: 'power1.in' }, 0.28)
-        .to(outgoing, { filter: 'blur(9px)', duration: 0.22 }, 0.34)
-        .to(outgoing, { opacity: 0, duration: 0.12 }, 0.46)
+        .to(outgoing, { opacity: 0, duration: 0.14 }, 0.44)
         .to(macro, { opacity: 1, duration: 0.14 }, 0.38)
         .to(macro, { scale: 1, duration: 0.34, ease: 'power1.out' }, 0.38)
 
-        // 50–72% — the macro world; the palette morphs via onUpdate above while
-        // the same unbroken strand lies across it.
+        // 50–72% — the macro world, with the same unbroken strand across it.
         .to(whisper, { opacity: 1, duration: 0.05 }, 0.5)
         .to(macroPhoto, { opacity: 1, duration: 0.12 }, 0.54)
         .to(whisper, { opacity: 0, duration: 0.05 }, 0.68)
+
+        // The palette morph, entirely in opacity: the incoming knit fades over
+        // the outgoing one, the strand arrives already wearing the new colour,
+        // and the ground walks through its stops one layer at a time. Nothing
+        // here repaints.
+        .to(knitTo, { opacity: 1, duration: 0.3 }, 0.46)
+        .to(threadTo, { opacity: 1, duration: 0.14 }, 0.48)
 
         // 70–88% — the new chapter arrives and the thread stitches under it.
         .to(title, { opacity: 1, y: 0, duration: 0.1, ease: 'power2.out' }, 0.7)
@@ -146,8 +149,12 @@ export function SeasonTransition({
         .to(macro, { scale: 0.82, opacity: 0, duration: 0.16, ease: 'power1.in' }, 0.84)
         .to(incoming, { opacity: 1, duration: 0.1 }, 0.84)
         .to(incoming, { scale: 1, duration: 0.16, ease: 'power1.out' }, 0.84)
-        .to(incoming, { filter: 'blur(0px)', duration: 0.14 }, 0.86)
         .to(title, { opacity: 0, y: -24, duration: 0.07 }, 0.93);
+
+      grounds.slice(1).forEach((layer, index) => {
+        const span = 0.5 / Math.max(1, grounds.length - 1);
+        timeline.to(layer, { opacity: 1, duration: span }, 0.3 + index * span);
+      });
 
       setReady(true);
     }, scope);
@@ -184,11 +191,19 @@ export function SeasonTransition({
       className="bridge-height relative"
       aria-label={`${from.label} bölümünden ${to.label} bölümüne geçiş`}
     >
-      <div
-        data-stage
-        className="sticky top-0 h-[100svh] w-full overflow-hidden"
-        style={{ backgroundColor: 'var(--bridge-ground)' }}
-      >
+      <div data-stage className="sticky top-0 h-[100svh] w-full overflow-hidden">
+        {/* 0 — the ground, as one static layer per colour stop. Walking through
+               them by opacity keeps the designed multi-stop journey without
+               repainting a full-screen fill on every frame. */}
+        {bridge.groundStops.map((hex, index) => (
+          <div
+            key={`${hex}-${index}`}
+            data-ground=""
+            className="absolute inset-0"
+            style={{ backgroundColor: hex }}
+          />
+        ))}
+
         {/* 1 — the season we are leaving, pushed into until it is only texture */}
         <div
           data-outgoing
@@ -201,7 +216,20 @@ export function SeasonTransition({
 
         {/* 2 — the macro world: drawn texture, with the real photograph over it */}
         <div data-macro className="absolute inset-0 will-change-transform">
-          <KnitTexture id={bridge.id} className="absolute inset-0" tile={132} />
+          <KnitTexture
+            id={`${bridge.id}-from`}
+            className="absolute inset-0"
+            tile={132}
+            {...bridge.knitFrom}
+          />
+          <div data-knit-to className="absolute inset-0">
+            <KnitTexture
+              id={`${bridge.id}-to`}
+              className="absolute inset-0"
+              tile={132}
+              {...bridge.knitTo}
+            />
+          </div>
           {macroImage && (
             <div data-macro-photo className="absolute inset-0">
               {macroImage}
@@ -209,9 +237,20 @@ export function SeasonTransition({
           )}
         </div>
 
-        {/* 3 — the thread itself */}
+        {/* 3 — the thread itself, as two layers. The outgoing colour is the one
+               that draws; the incoming colour is already complete underneath and
+               simply fades over it, so the strand changes season without the
+               dash animation ever running twice. */}
         <div data-thread-wrap className="pointer-events-none absolute inset-0">
-          <ThreadPath id={bridge.id} className="h-full w-full" />
+          <div data-thread-layer="from" className="absolute inset-0">
+            <ThreadPath className="h-full w-full" color={bridge.threadStops[0]} />
+          </div>
+          <div data-thread-layer="to" className="absolute inset-0">
+            <ThreadPath
+              className="h-full w-full"
+              color={bridge.threadStops[bridge.threadStops.length - 1]}
+            />
+          </div>
         </div>
 
         {/* 4 — the incoming chapter, knitted out of the texture */}
@@ -242,7 +281,7 @@ export function SeasonTransition({
           >
             <path
               d="M 4 9 C 40 2, 70 14, 106 8 C 142 2, 170 14, 206 8 C 240 2, 268 13, 296 8"
-              stroke="var(--thread-color)"
+              stroke={bridge.threadStops[bridge.threadStops.length - 1]}
               strokeWidth="5"
               strokeLinecap="round"
               data-underline

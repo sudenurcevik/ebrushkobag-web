@@ -122,8 +122,11 @@ export function SeasonIndicator({ seasons }: { seasons: Season[] }) {
         ].join(' ')}
       >
         <ol
-          className="flex items-center gap-1 rounded-full px-2 py-1.5 backdrop-blur-sm"
-          style={{ backgroundColor: `${ground}E6`, boxShadow: `0 0 0 1px ${accent}55` }}
+          // Solid rather than a blurred panel: a backdrop filter on a fixed
+          // element is re-composited against everything scrolling behind it,
+          // which is exactly the wrong cost on a phone.
+          className="flex items-center gap-1 rounded-full px-2 py-1.5"
+          style={{ backgroundColor: ground, boxShadow: `0 0 0 1px ${accent}55` }}
         >
           {seasons.map((season) => {
             const isActive = season.id === active;

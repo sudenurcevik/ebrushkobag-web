@@ -12,21 +12,31 @@
  * When a real macro photograph exists it crossfades *over* this layer, so the
  * drawn texture becomes the fallback rather than the final look.
  *
- * Colours come from CSS custom properties, so the transition re-colours the
- * whole field by writing three variables — no React re-render per scroll frame.
+ * Colours are baked in as literal attributes rather than read from CSS
+ * variables. Writing a variable this field depends on invalidates paint for the
+ * whole full-screen pattern, and doing that once per scroll frame was the single
+ * most expensive thing on the page — on a phone it was most of the stutter. The
+ * transition now stacks two of these, one per palette, and cross-fades them:
+ * opacity is a compositor property, so the morph costs no paint at all.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 export function KnitTexture({
   className = '',
-  /** Tile size in px. Larger reads as a closer macro crop. */
+  /** Tile size in px. Larger reads as a closer macro crop — and repeats less. */
   tile = 96,
   opacity = 1,
   id,
+  yarn,
+  shade,
+  ground,
 }: {
   className?: string;
   tile?: number;
   opacity?: number;
   id: string;
+  yarn: string;
+  shade: string;
+  ground: string;
 }) {
   const patternId = `knit-${id}`;
   const shadowId = `knit-shadow-${id}`;
@@ -47,7 +57,7 @@ export function KnitTexture({
           texture holds up at any zoom.
         */}
         <pattern id={patternId} width={tile} height={tile * 0.58} patternUnits="userSpaceOnUse">
-          <rect width={tile} height={tile * 0.58} fill="var(--knit-ground)" />
+          <rect width={tile} height={tile * 0.58} fill={ground} />
 
           {/*
             A stockinette V. Rows are packed tightly enough that the ground
@@ -62,8 +72,8 @@ export function KnitTexture({
               const lit = `M ${x + tile * 0.06} ${tile * 0.5} L ${x + tile * 0.5} ${tile * 0.02}`;
               return (
                 <g key={offset}>
-                  <path d={v} stroke="var(--knit-shade)" strokeWidth={tile * 0.36} opacity="0.85" />
-                  <path d={v} stroke="var(--knit-yarn)" strokeWidth={tile * 0.26} />
+                  <path d={v} stroke={shade} strokeWidth={tile * 0.36} opacity="0.85" />
+                  <path d={v} stroke={yarn} strokeWidth={tile * 0.26} />
                   <path d={lit} stroke="#FFFFFF" strokeWidth={tile * 0.05} opacity="0.28" />
                 </g>
               );

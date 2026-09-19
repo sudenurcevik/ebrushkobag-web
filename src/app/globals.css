@@ -6,14 +6,6 @@
   :root {
     color-scheme: light;
     --nav-height: 4.5rem;
-
-    /* Written by the seasonal bridges as the scroll morphs one palette into
-       the next. Declared here so the texture renders before GSAP runs. */
-    --knit-yarn: #a0db6b;
-    --knit-shade: #7fbc4b;
-    --knit-ground: #fee9ea;
-    --thread-color: #a0db6b;
-    --bridge-ground: #fee9ea;
   }
 
   * {

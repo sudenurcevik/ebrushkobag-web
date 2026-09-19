@@ -47,7 +47,16 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="tr" className={`${display.variable} ${sans.variable}`} suppressHydrationWarning>
+    <html
+      lang="tr"
+      className={`${display.variable} ${sans.variable}`}
+      // `scroll-behavior: smooth` is set globally for in-page anchors. Since
+      // Next 16 no longer suppresses it during route transitions on its own,
+      // this opts back in — without it, going to /atelier would smooth-scroll
+      // to the top instead of landing there.
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+    >
       <body>
         {/*
           Marks the document as scripted before first paint. Every reveal's

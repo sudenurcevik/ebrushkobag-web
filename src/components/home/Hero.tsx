@@ -1,75 +1,38 @@
-import Link from 'next/link';
-import { BRAND } from '@/config/brand';
-import { HERO } from '@/data/content';
-import { ctaClasses, ctaStyle } from '@/components/ui/Cta';
+import { SEASONS } from '@/data/seasons';
+import { getProduct } from '@/data/products';
 import { EditorialImage } from '@/components/ui/EditorialImage';
-import { RevealLines } from '@/components/ui/Reveal';
-import { HeroLogo } from './HeroLogo';
-import { HeroMedia } from './HeroMedia';
+import { HeroReel, type ReelFrame } from './HeroReel';
 
 /**
- * The first viewport introduces the brand before the year starts (plan §7).
- * Full bleed, cinematic crop, two lines of type and one action — nothing else.
+ * The first viewport introduces the brand before the year starts (plan §7):
+ * two lines of type, one action, and the logo as the reel the four seasons are
+ * wound on. Scrolling unwinds it into the film strip below.
  *
- * The logo lives here rather than in the navigation: one large, slowly turning
- * appearance on the right, behind the headline.
+ * Frames are rendered here, on the server, so the photographs keep next/image
+ * optimisation and the placeholder check; the reel only moves them. Each
+ * season shows the first bag of its chapter.
  */
 export function Hero() {
-  return (
-    <section className="relative isolate flex h-[100svh] min-h-[34rem] flex-col justify-end overflow-hidden bg-chocolate">
-      <HeroMedia>
+  const frames: ReelFrame[] = SEASONS.map((season) => {
+    const product = getProduct(season.productIds[0]);
+    return {
+      season,
+      image: product ? (
         <EditorialImage
-          image={HERO.image}
-          sizes="100vw"
+          image={product.image}
+          sizes="(min-width: 1024px) 14rem, 36vw"
+          // Wound above the clip, the frames never enter the viewport the way
+          // lazy loading expects, and would arrive late mid-unwind.
           priority
           fill
-          placeholderAlign="top"
           className="h-full w-full"
-          ground="#4A2E22"
-          ink="#FFFBF4"
-          accent="#FF68C4"
+          ground={season.surface}
+          ink={season.ink}
+          accent={season.accent}
         />
-      </HeroMedia>
+      ) : null,
+    };
+  });
 
-      <HeroLogo />
-
-      {/* Two stops only: the type has to hold, the photograph has to breathe.
-          Sits above the logo so the mark is washed by the same light as the
-          photograph rather than floating on top of it. */}
-      <div
-        className="absolute inset-0 z-[2] bg-gradient-to-t from-chocolate/85 via-chocolate/20 to-chocolate/40"
-        aria-hidden
-      />
-
-      <div className="shell relative z-10 pb-16 sm:pb-20">
-        <h1 className="font-display text-display-lg text-cream">
-          <RevealLines lines={HERO.lines} />
-        </h1>
-
-        <div className="mt-8 flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
-          <p className="max-w-measure font-sans text-lg text-cream/85 sm:text-xl">{HERO.subline}</p>
-
-          <Link
-            href="/atelier"
-            className={ctaClasses('solid', 'lg', 'self-start sm:self-auto')}
-            style={ctaStyle('solid', { accent: '#FF68C4', ink: '#241A20', onAccent: '#FFFBF4' })}
-          >
-            {HERO.cta}
-          </Link>
-        </div>
-
-        <a
-          href="#mevsimler"
-          className="group mt-12 inline-flex items-center gap-3 text-cream/75 transition-colors duration-500 hover:text-cream"
-        >
-          <span className="label">{HERO.scrollHint}</span>
-          <span className="animate-scroll-hint text-sm leading-none" aria-hidden>
-            ↓
-          </span>
-        </a>
-      </div>
-
-      <span className="sr-only">{BRAND.taglineTr}</span>
-    </section>
-  );
+  return <HeroReel frames={frames} />;
 }

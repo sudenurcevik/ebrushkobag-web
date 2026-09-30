@@ -101,6 +101,8 @@ const config: Config = {
         // The logo is a ball of yarn; one turn a minute reads as the ball
         // moving, not as an animation asking to be watched.
         'spin-slow': 'spin 60s linear infinite',
+        // The hero reel: slow enough to sit below conscious attention.
+        'spin-reel': 'spin 26s linear infinite',
       },
     },
   },

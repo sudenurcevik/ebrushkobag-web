@@ -127,6 +127,17 @@
     display: none;
   }
 
+  /* The opening reel's pinned stretch: long enough to unwind, short enough on
+     touch that the hero never feels like a trap. */
+  .hero-height {
+    height: 170svh;
+  }
+  @media (min-width: 1024px) {
+    .hero-height {
+      height: 220vh;
+    }
+  }
+
   /* Height of a seasonal bridge. Shorter on touch so the pinned stretch never
      becomes a scroll trap (plan §10, §37). */
   .bridge-height {

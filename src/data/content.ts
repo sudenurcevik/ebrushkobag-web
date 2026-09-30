@@ -6,14 +6,7 @@ import type { ImageRef } from './types';
  */
 
 export const HERO = {
-  image: {
-    src: '/images/editorial/hero.webp',
-    alt: 'Gün batımı ışığında kahverengi el örgüsü çanta',
-    width: 2400,
-    height: 3000,
-    placeholderLabel: 'AÇILIŞ — HERO',
-    required: true,
-  } satisfies ImageRef,
+  eyebrow: 'EBRUSHKOBAG / SEASONAL STORY',
   lines: ['Her mevsim', 'başka bir hikâye.'],
   subline: 'Handmade knit bags, made your way.',
   cta: 'Çantanı Tasarla',

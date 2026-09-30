@@ -1,0 +1,283 @@
+/* Styles for the /yarnGallery experiment only. */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.backdropLayer {
+  position: absolute;
+  inset: 0;
+  transition: opacity 1.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* A new season's sky opens as a widening circle over the old one. */
+.skyReveal {
+  animation: sky-reveal 2.6s cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+
+@keyframes sky-reveal {
+  from {
+    clip-path: circle(0% at 50% 46%);
+  }
+  to {
+    clip-path: circle(150% at 50% 46%);
+  }
+}
+
+/* The ring of light on the circle's edge, fading as it runs out. */
+.skyRing {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  z-index: 3;
+  width: 1px;
+  height: 1px;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.9),
+    0 0 40px 10px rgba(255, 255, 255, 0.55);
+  transform: translate(-50%, -50%) scale(0);
+  animation: sky-ring 2.6s cubic-bezier(0.65, 0, 0.35, 1) both;
+  pointer-events: none;
+}
+
+@keyframes sky-ring {
+  from {
+    width: 0;
+    height: 0;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    width: 300vmax;
+    height: 300vmax;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skyReveal,
+  .skyRing {
+    animation: none;
+  }
+  .skyRing {
+    display: none;
+  }
+}
+
+/* Summer: faint rays turning slowly round a sun high on the right. */
+.sunRays {
+  position: absolute;
+  left: 80%;
+  top: 14%;
+  width: 180vmax;
+  height: 180vmax;
+  transform: translate(-50%, -50%);
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(255, 232, 160, 0.16) 0deg 3deg,
+    rgba(255, 232, 160, 0) 3deg 13deg
+  );
+  mask-image: radial-gradient(circle, #000 0%, rgba(0, 0, 0, 0.5) 18%, transparent 42%);
+  -webkit-mask-image: radial-gradient(circle, #000 0%, rgba(0, 0, 0, 0.5) 18%, transparent 42%);
+  animation: sun-turn 240s linear infinite;
+}
+
+@keyframes sun-turn {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sunRays {
+    animation: none;
+  }
+}
+
+.grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.045;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .3 0 0 0 0 .2 0 0 0 0 .2 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.canvas {
+  position: fixed !important;
+  inset: 0;
+  z-index: 1;
+  width: 100% !important;
+  height: 100svh !important;
+}
+
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  font-size: 0.6875rem;
+  letter-spacing: 0.3em;
+  color: rgba(90, 75, 83, 0.7);
+  transition: opacity 0.8s ease;
+}
+
+.loader[data-done='true'] {
+  opacity: 0;
+}
+
+/* The season rail on the right edge. */
+.rail {
+  position: fixed;
+  right: clamp(1rem, 3vw, 2.5rem);
+  top: 50%;
+  z-index: 5;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 0.9rem;
+  align-items: stretch;
+}
+
+/* Phones: the caption already names the season, and the reel needs the width. */
+@media (max-width: 639px) {
+  .rail {
+    display: none;
+  }
+}
+
+.railTrack {
+  position: relative;
+  width: 1px;
+  background: rgba(36, 26, 32, 0.12);
+}
+
+.railFill {
+  position: absolute;
+  inset: 0;
+  background: #b8966a;
+  transform-origin: top;
+  transform: scaleY(0);
+}
+
+.intro {
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+/* The line and the cue rise in once the hook has finished writing. */
+.introInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 1s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+main[data-written='true'] .introInner {
+  opacity: 1;
+  transform: none;
+}
+
+main[data-written='true'] .introInner .cue {
+  pointer-events: auto;
+}
+
+.tagline {
+  font-size: clamp(0.95rem, 1.6vw, 1.25rem);
+  font-weight: 300;
+  letter-spacing: -0.01em;
+  color: #5a4b53;
+}
+
+.tagline span {
+  font-weight: 500;
+  background: linear-gradient(90deg, #e9429f, #88adfe);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* The cue: a ring of words turning slowly round a bobbing arrow. */
+.cue {
+  position: relative;
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(36, 26, 32, 0.08),
+    0 18px 40px -18px rgba(90, 60, 80, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #241a20;
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cue:hover {
+  transform: scale(1.06);
+}
+
+.cueRing {
+  position: absolute;
+  inset: 0;
+  animation: cue-turn 16s linear infinite;
+}
+
+.cueText {
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  fill: currentColor;
+}
+
+.cueArrow {
+  font-size: 1.15rem;
+  animation: cue-bob 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@keyframes cue-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes cue-bob {
+  0%,
+  100% {
+    transform: translateY(-3px);
+  }
+  50% {
+    transform: translateY(4px);
+  }
+}
+
+/* The season rail waits until the name is written too. */
+.afterWriting {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1s ease 0.3s;
+}
+
+main[data-written='true'] .afterWriting {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cueRing,
+  .cueArrow {
+    animation: none;
+  }
+}

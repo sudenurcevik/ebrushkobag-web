@@ -1,4 +1,4 @@
-import type { ArchiveItem, Product } from './types';
+import type { ArchiveItem, ImageRef, Product, SeasonId } from './types';
 
 /**
  * Products are editorial moments, not shop cards (plan §22).
@@ -7,111 +7,113 @@ import type { ArchiveItem, Product } from './types';
  * piece becomes ARŞİV or TEK PARÇA, and the call to action turns it into the
  * starting point for a new commission instead of dead inventory.
  *
- * The four pieces with real photography (plan §39) are patchwork-01,
- * sunset-05, shine-07 and midnight-08.
+ * The current eight come from the vitrin placeholder pack
+ * (EBRUSHKOBAG_VITRIN_PLACEHOLDERS/docs/manifest.csv): each bag sits under its
+ * `season_primary`, its photograph in /public/images/products/<season>/<id>.jpg.
+ * They are stand-ins on satin until the final shoot; the frame sizes below are
+ * still the ones that shoot should deliver.
+ *
+ * HALKA NO. 01 — the fuchsia ring-handle bag — stays in the collection for good.
  */
+const productPhoto = (season: SeasonId, id: string, alt: string, label: string): ImageRef => ({
+  src: `/images/products/${season}/${id}.jpg`,
+  alt,
+  width: 1600,
+  height: 2000,
+  placeholderLabel: label,
+  required: true,
+});
+
 export const PRODUCTS: Product[] = [
   {
-    id: 'patchwork-01',
-    name: 'PATCHWORK NO. 01',
-    materials: 'Pamuk ipi / Ahşap boncuk / El yapımı',
-    note: 'Her karesi ayrı örülür, sonra tek tek birleştirilir. İki tanesi asla aynı çıkmıyor.',
+    id: 'halka-01',
+    name: 'HALKA NO. 01',
+    materials: 'Fuşya pamuk ipi / Halka sap / Örgü kordon askı',
+    note: 'Halka sap, örgü kordon askı ve baştan sona fuşya. Koleksiyonun sabit parçası; her bahar vitrinin başında.',
+    season: 'spring',
+    status: 'current',
+    image: productPhoto(
+      'spring',
+      'halka-01',
+      'Pembe saten üzerinde halka saplı, örgü kordon askılı fuşya kroşe çanta',
+      'HALKA NO. 01',
+    ),
+    inspires: { model: 'bloom', body: 'hotpink', detail: 'none', handle: 'knitStrap' },
+  },
+  {
+    id: 'seafoam-02',
+    name: 'SEAFOAM NO. 02',
+    materials: 'Pamuk ipi / Boncuk sap / Altın kilit',
+    note: 'Deniz köpüğü gövde, renk renk boncuktan sap. Bahardan yaza geçerken elde taşınacak parça.',
     season: 'spring',
     status: 'oneOfOne',
-    image: {
-      src: '/images/products/patchwork/patchwork-01.webp',
-      alt: 'Renkli patchwork tığ işi çanta',
-      width: 1600,
-      height: 2000,
-      placeholderLabel: 'PATCHWORK NO. 01',
-      required: true,
-    },
-    inspires: { model: 'patch', body: 'lime', detail: 'woodBeads', handle: 'knitStrap' },
+    image: productPhoto(
+      'spring',
+      'seafoam-02',
+      'Mint saten üzerinde renkli boncuk saplı, kapaklı deniz köpüğü örgü çanta',
+      'SEAFOAM NO. 02',
+    ),
+    inspires: { model: 'bloom', body: 'turquoise', detail: 'woodBeads', handle: 'knitStrap' },
   },
   {
-    id: 'bloom-02',
-    name: 'BLOOM NO. 02',
-    materials: 'Pamuk ipi / Ahşap sap / El yapımı',
-    note: 'Merkezden dışa doğru örülen daire gövde. Bahar paletindeki en sakin parça.',
-    season: 'spring',
-    status: 'current',
-    image: {
-      src: '/images/products/patchwork/bloom-02.webp',
-      alt: 'Pastel tonlarda yuvarlak tığ işi çanta',
-      width: 1600,
-      height: 2000,
-      placeholderLabel: 'BLOOM NO. 02',
-      required: true,
-    },
-    inspires: { model: 'bloom', body: 'blush', detail: 'pearl', handle: 'woodHandle' },
-  },
-  {
-    id: 'sorbet-03',
-    name: 'SORBET NO. 03',
-    materials: 'Hafif pamuk ipi / Cam boncuk / El yapımı',
-    note: 'Yaz paletinin en yüksek kontrastlı parçası: periwinkle gövde, sarı detay.',
+    id: 'hasir-03',
+    name: 'HASIR NO. 03',
+    materials: 'Doğal hasır ip / Örgü sap / El yapımı',
+    note: 'Dama desenli hasır örgü, kum tonları. Plajda rahat, şehirde de şık.',
     season: 'summer',
     status: 'current',
-    image: {
-      src: '/images/products/patchwork/sorbet-03.webp',
-      alt: 'Mavi ve sarı tonlarda yaz çantası',
-      width: 1600,
-      height: 2000,
-      placeholderLabel: 'SORBET NO. 03',
-      required: true,
-    },
-    inspires: { model: 'bloom', body: 'periwinkle', detail: 'gold', handle: 'knitStrap' },
+    image: productPhoto(
+      'summer',
+      'hasir-03',
+      'Şampanya rengi saten üzerinde dama desenli doğal hasır tote çanta',
+      'HASIR NO. 03',
+    ),
+    inspires: { model: 'patch', body: 'cream', detail: 'none', handle: 'knitStrap' },
   },
   {
-    id: 'marina-04',
-    name: 'MARINA NO. 04',
-    materials: 'Hafif pamuk ipi / Deri sap / El yapımı',
-    note: 'Gün boyu taşınacak kadar hafif, akşam için yeterince iddialı.',
+    id: 'resort-04',
+    name: 'RESORT NO. 04',
+    materials: 'Doğal örgü ip / Ahşap sap / El yapımı',
+    note: 'Çapraz ilmekli doğal örgü, yuvarlak ahşap sap. Resort akşamlarının çantası.',
     season: 'summer',
     status: 'archive',
-    image: {
-      src: '/images/products/patchwork/marina-04.webp',
-      alt: 'Turkuaz detaylı yaz çantası',
-      width: 1600,
-      height: 2000,
-      placeholderLabel: 'MARINA NO. 04',
-      required: true,
-    },
-    inspires: { model: 'sunset', body: 'turquoise', detail: 'none', handle: 'brownLeather' },
+    image: productPhoto(
+      'summer',
+      'resort-04',
+      'Krem saten üzerinde yuvarlak ahşap saplı, çapraz ilmekli taba örgü çanta',
+      'RESORT NO. 04',
+    ),
+    inspires: { model: 'sunset', body: 'cream', detail: 'none', handle: 'woodHandle' },
   },
   {
-    id: 'sunset-05',
-    name: 'SUNSET NO. 05',
+    id: 'yelpaze-05',
+    name: 'YELPAZE NO. 05',
     materials: 'Kalın pamuk ipi / Deri sap / El yapımı',
-    note: 'Gün batımında çekildi, o yüzden bu ismi aldı. Sonbaharın imza parçası.',
+    note: 'Yelpaze ilmekleri ve deri saplar. Sonbaharın en sıcak, en dokulu tonu.',
     season: 'autumn',
     status: 'oneOfOne',
-    image: {
-      src: '/images/products/brown-knit/sunset-05.webp',
-      alt: 'Gün batımı ışığında kahverengi el örgüsü çanta',
-      width: 1600,
-      height: 2000,
-      placeholderLabel: 'SUNSET NO. 05',
-      required: true,
-    },
+    image: productPhoto(
+      'autumn',
+      'yelpaze-05',
+      'Bronz saten üzerinde yelpaze ilmekli, deri saplı çikolata kahvesi tote',
+      'YELPAZE NO. 05',
+    ),
     inspires: { model: 'sunset', body: 'chocolate', detail: 'none', handle: 'brownLeather' },
   },
   {
-    id: 'ember-06',
-    name: 'EMBER NO. 06',
-    materials: 'Kalın pamuk ipi / Örgü sap / El yapımı',
-    note: 'Bordo gövde, krem astar. Kalın ilmek elde hissedilecek kadar belirgin.',
+    id: 'kircilli-06',
+    name: 'KIRÇILLI NO. 06',
+    materials: 'Kırçıllı ip / Deri sap / Kare paneller',
+    note: 'Sarı-kahve kırçıllı kareler, kahve çerçeve. Elde örülmüş bir sonbahar paleti.',
     season: 'autumn',
     status: 'current',
-    image: {
-      src: '/images/products/brown-knit/ember-06.webp',
-      alt: 'Bordo kalın örgü çanta',
-      width: 1600,
-      height: 2000,
-      placeholderLabel: 'EMBER NO. 06',
-      required: true,
-    },
-    inspires: { model: 'patch', body: 'burgundy', detail: 'woodBeads', handle: 'knitStrap' },
+    image: productPhoto(
+      'autumn',
+      'kircilli-06',
+      'Altın saten üzerinde kahve çerçeveli, sarı kırçıllı kare panelli tote',
+      'KIRÇILLI NO. 06',
+    ),
+    inspires: { model: 'patch', body: 'olive', detail: 'none', handle: 'brownLeather' },
   },
   {
     id: 'shine-07',
@@ -120,31 +122,27 @@ export const PRODUCTS: Product[] = [
     note: 'Gümüş metalik clutch. Işığı doğrudan yansıtan tek parçamız.',
     season: 'winter',
     status: 'current',
-    image: {
-      src: '/images/products/silver-clutch/shine-07.webp',
-      alt: 'Gümüş metalik clutch çanta, ürün çekimi',
-      width: 1600,
-      height: 2000,
-      placeholderLabel: 'SHINE NO. 07',
-      required: true,
-    },
+    image: productPhoto(
+      'winter',
+      'shine-07',
+      'Gümüş saten üzerinde zincir askılı metalik örgü clutch',
+      'SHINE NO. 07',
+    ),
     inspires: { model: 'shine', body: 'silver', detail: 'silver', handle: 'chain' },
   },
   {
     id: 'midnight-08',
     name: 'MIDNIGHT NO. 08',
-    materials: 'Pul işlemeli ip / Zincir sap / El yapımı',
-    note: 'Siyah pullu gövde. Kampanya karesinde omuzda görünüyor — ölçü fikri için iyi bir referans.',
+    materials: 'Pul işlemeli ip / Örgü sap / El yapımı',
+    note: 'Kat kat siyah pul, örgü sap. Gece ışığında her adımda değişiyor.',
     season: 'winter',
     status: 'oneOfOne',
-    image: {
-      src: '/images/products/black-sequin/midnight-08.webp',
-      alt: 'Siyah pullu çantayı omzunda taşıyan bir kişi',
-      width: 1600,
-      height: 2000,
-      placeholderLabel: 'MIDNIGHT NO. 08',
-      required: true,
-    },
+    image: productPhoto(
+      'winter',
+      'midnight-08',
+      'Gümüş saten üzerinde kat kat siyah pullu hobo çanta',
+      'MIDNIGHT NO. 08',
+    ),
     inspires: { model: 'shine', body: 'black', detail: 'silver', handle: 'chain' },
   },
 ];

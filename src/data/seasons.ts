@@ -77,7 +77,7 @@ export const SEASONS: Season[] = [
       height: 1080,
       required: true,
     },
-    productIds: ['patchwork-01', 'bloom-02'],
+    productIds: ['halka-01', 'seafoam-02'],
   },
 
   {
@@ -140,7 +140,7 @@ export const SEASONS: Season[] = [
       height: 1080,
       required: true,
     },
-    productIds: ['sorbet-03', 'marina-04'],
+    productIds: ['hasir-03', 'resort-04'],
   },
 
   {
@@ -203,7 +203,7 @@ export const SEASONS: Season[] = [
       height: 1080,
       required: true,
     },
-    productIds: ['sunset-05', 'ember-06'],
+    productIds: ['yelpaze-05', 'kircilli-06'],
   },
 
   {

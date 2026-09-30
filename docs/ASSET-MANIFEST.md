@@ -2,7 +2,7 @@
 
 > Bu dosya `src/lib/asset-manifest.ts` üzerinden üretilir. Elle düzenlemeyin; mevsim/ürün/katalog verisi değiştiğinde `npm run assets:manifest` ile yenileyin.
 
-Toplam **82 dosya**. Hepsi `public/` altına, tabloda yazan yola birebir aynı adla konur. Eksik dosyalar tasarlanmış yer tutucularla karşılanır, bu yüzden görseller parça parça teslim edilebilir.
+Toplam **81 dosya**. Hepsi `public/` altına, tabloda yazan yola birebir aynı adla konur. Eksik dosyalar tasarlanmış yer tutucularla karşılanır, bu yüzden görseller parça parça teslim edilebilir.
 
 **Kritik** işaretli dosyalar markanın gerçek ürün kimliğini taşır ve uydurulamaz.
 Canlı durumu `npm run dev` çalışırken `/asset-manifest` adresinde görebilirsiniz.
@@ -13,7 +13,6 @@ Sitenin omurgası. Her mevsimin üç karesi var: bölüm görseli, geçişte zoo
 
 | Dosya | Ölçü | Oran | Şeffaf | Kritik | Nerede | Amaç |
 | --- | --- | --- | --- | --- | --- | --- |
-| `/images/editorial/hero.webp` | 2400×3000 | 4:5 | Hayır | Evet | Açılış | Markayı tanıtan tam ekran kare. Sol alt üçte biri boş kalmalı; başlık oraya oturuyor. |
 | `/images/seasons/spring/hero.webp` | 2000×2500 | 4:5 | Hayır | Evet | BAHAR — bölüm görseli | Bölümün büyük editoryal karesi. Kadrajın bir kenarı ekrandan taşacak şekilde kullanılıyor. |
 | `/images/seasons/spring/product.webp` | 1800×1800 | 1:1 | Hayır | Evet | BAHAR — geçiş ürünü | Mevsim geçişinde içine zoom yapılan kare. Örgü dokusu net görünmeli; çanta ortalanmış olmalı. |
 | `/images/seasons/spring/macro.webp` | 2400×1600 | 3:2 | Hayır | Evet | BAHAR — makro doku | Geçişin tam ekran olduğu an. İlmeklerin ayırt edildiği çok yakın makro çekim. Dosya yoksa site çizilmiş örgü dokusunu kullanır — ama gerçek doku bu bölümün imzası. |
@@ -44,14 +43,14 @@ Gerçek ürün kimliği korunmalı. Arka plan temizleme, ışık dengeleme ve ko
 
 | Dosya | Ölçü | Oran | Şeffaf | Kritik | Nerede | Amaç |
 | --- | --- | --- | --- | --- | --- | --- |
-| `/images/products/patchwork/patchwork-01.webp` | 1600×2000 | 4:5 | Hayır | Evet | SPRING — PATCHWORK NO. 01 | Ürünün editoryal karesi. Gerçek çantanın kendi geometrisi korunmalı; yeniden tasarlanmış bir çanta üretilmemeli (plan §31). |
-| `/images/products/patchwork/bloom-02.webp` | 1600×2000 | 4:5 | Hayır | Evet | SPRING — BLOOM NO. 02 | Ürünün editoryal karesi. Gerçek çantanın kendi geometrisi korunmalı; yeniden tasarlanmış bir çanta üretilmemeli (plan §31). |
-| `/images/products/patchwork/sorbet-03.webp` | 1600×2000 | 4:5 | Hayır | Evet | SUMMER — SORBET NO. 03 | Ürünün editoryal karesi. Gerçek çantanın kendi geometrisi korunmalı; yeniden tasarlanmış bir çanta üretilmemeli (plan §31). |
-| `/images/products/patchwork/marina-04.webp` | 1600×2000 | 4:5 | Hayır | Evet | SUMMER — MARINA NO. 04 | Ürünün editoryal karesi. Gerçek çantanın kendi geometrisi korunmalı; yeniden tasarlanmış bir çanta üretilmemeli (plan §31). |
-| `/images/products/brown-knit/sunset-05.webp` | 1600×2000 | 4:5 | Hayır | Evet | AUTUMN — SUNSET NO. 05 | Ürünün editoryal karesi. Gerçek çantanın kendi geometrisi korunmalı; yeniden tasarlanmış bir çanta üretilmemeli (plan §31). |
-| `/images/products/brown-knit/ember-06.webp` | 1600×2000 | 4:5 | Hayır | Evet | AUTUMN — EMBER NO. 06 | Ürünün editoryal karesi. Gerçek çantanın kendi geometrisi korunmalı; yeniden tasarlanmış bir çanta üretilmemeli (plan §31). |
-| `/images/products/silver-clutch/shine-07.webp` | 1600×2000 | 4:5 | Hayır | Evet | WINTER — SHINE NO. 07 | Ürünün editoryal karesi. Gerçek çantanın kendi geometrisi korunmalı; yeniden tasarlanmış bir çanta üretilmemeli (plan §31). |
-| `/images/products/black-sequin/midnight-08.webp` | 1600×2000 | 4:5 | Hayır | Evet | WINTER — MIDNIGHT NO. 08 | Ürünün editoryal karesi. Gerçek çantanın kendi geometrisi korunmalı; yeniden tasarlanmış bir çanta üretilmemeli (plan §31). |
+| `/images/products/spring/halka-01.jpg` | 1600×2000 | 4:5 | Hayır | Evet | SPRING — HALKA NO. 01 | Ürünün editoryal karesi. Gerçek çantanın kendi geometrisi korunmalı; yeniden tasarlanmış bir çanta üretilmemeli (plan §31). |
+| `/images/products/spring/seafoam-02.jpg` | 1600×2000 | 4:5 | Hayır | Evet | SPRING — SEAFOAM NO. 02 | Ürünün editoryal karesi. Gerçek çantanın kendi geometrisi korunmalı; yeniden tasarlanmış bir çanta üretilmemeli (plan §31). |
+| `/images/products/summer/hasir-03.jpg` | 1600×2000 | 4:5 | Hayır | Evet | SUMMER — HASIR NO. 03 | Ürünün editoryal karesi. Gerçek çantanın kendi geometrisi korunmalı; yeniden tasarlanmış bir çanta üretilmemeli (plan §31). |
+| `/images/products/summer/resort-04.jpg` | 1600×2000 | 4:5 | Hayır | Evet | SUMMER — RESORT NO. 04 | Ürünün editoryal karesi. Gerçek çantanın kendi geometrisi korunmalı; yeniden tasarlanmış bir çanta üretilmemeli (plan §31). |
+| `/images/products/autumn/yelpaze-05.jpg` | 1600×2000 | 4:5 | Hayır | Evet | AUTUMN — YELPAZE NO. 05 | Ürünün editoryal karesi. Gerçek çantanın kendi geometrisi korunmalı; yeniden tasarlanmış bir çanta üretilmemeli (plan §31). |
+| `/images/products/autumn/kircilli-06.jpg` | 1600×2000 | 4:5 | Hayır | Evet | AUTUMN — KIRÇILLI NO. 06 | Ürünün editoryal karesi. Gerçek çantanın kendi geometrisi korunmalı; yeniden tasarlanmış bir çanta üretilmemeli (plan §31). |
+| `/images/products/winter/shine-07.jpg` | 1600×2000 | 4:5 | Hayır | Evet | WINTER — SHINE NO. 07 | Ürünün editoryal karesi. Gerçek çantanın kendi geometrisi korunmalı; yeniden tasarlanmış bir çanta üretilmemeli (plan §31). |
+| `/images/products/winter/midnight-08.jpg` | 1600×2000 | 4:5 | Hayır | Evet | WINTER — MIDNIGHT NO. 08 | Ürünün editoryal karesi. Gerçek çantanın kendi geometrisi korunmalı; yeniden tasarlanmış bir çanta üretilmemeli (plan §31). |
 
 ## Arşiv
 

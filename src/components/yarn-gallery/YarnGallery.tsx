@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Logo } from '@/components/brand/Logo';
 import {
   CARD_COUNT,
+  CARD_THEME,
   CHAPTER,
   DESCENT_STRETCH,
   OPENING_SKY,
@@ -92,6 +93,41 @@ function holdAtChapter(season: number) {
   };
   const timer = window.setTimeout(release, CHAPTER.settled * 1000);
   return release;
+}
+
+const TURKISH: Record<SeasonId, string> = { spring: 'İlkbahar', summer: 'Yaz', autumn: 'Sonbahar', winter: 'Kış' };
+
+/**
+ * The first beat of a new season, drawn over the scene: the scene behind is
+ * blurred and veiled, and the season's name stands in front of everything,
+ * large and readable. As the page's hold ends it shrinks back and lifts, and
+ * the scene's own title settles behind the spine (SeasonTitles).
+ */
+function ChapterOverlay({ season }: { season: SeasonId }) {
+  const theme = CARD_THEME[season];
+  const index = YARN_SEASONS.indexOf(season);
+  return (
+    <div
+      className={styles.chapter}
+      aria-hidden
+      style={
+        {
+          '--chapter-length': `${CHAPTER.settled}s`,
+          '--chapter-rim': theme.rim,
+          '--chapter-accent': theme.accent,
+        } as React.CSSProperties
+      }
+    >
+      <div className={styles.chapterVeil} />
+      <div className={styles.chapterTitle}>
+        <span className={styles.chapterNumber}>
+          {pad(index + 1)} / {pad(YARN_SEASONS.length)}
+        </span>
+        <span className={styles.chapterName}>{SEASON_NAME[season]}</span>
+        <span className={styles.chapterLocal}>{TURKISH[season].toLocaleUpperCase('tr-TR')}</span>
+      </div>
+    </div>
+  );
 }
 
 /** Card order along the helix — the same list the scene builds. */
@@ -180,6 +216,7 @@ export function YarnGallery() {
   const sky = opening ? 'opening' : current;
   const [under, setUnder] = useState<string | null>(null);
   const [turn, setTurn] = useState(0);
+  const [chapter, setChapter] = useState<{ season: SeasonId; key: number } | null>(null);
   const lastSky = useRef(sky);
   useEffect(() => {
     if (lastSky.current === sky) return;
@@ -189,9 +226,13 @@ export function YarnGallery() {
     lastSky.current = sky;
     setTurn((t) => t + 1);
     const done = window.setTimeout(() => setUnder(null), reducedMotion ? 0 : 2700);
-    const release = forward && !jumping.current ? holdAtChapter(order(sky)) : undefined;
+    const play = forward && !jumping.current;
+    const release = play ? holdAtChapter(order(sky)) : undefined;
+    if (play) setChapter({ season: sky as SeasonId, key: Date.now() });
+    const over = play ? window.setTimeout(() => setChapter(null), CHAPTER.settled * 1000 + 200) : undefined;
     return () => {
       window.clearTimeout(done);
+      window.clearTimeout(over);
       release?.();
     };
   }, [sky, reducedMotion]);
@@ -259,6 +300,8 @@ export function YarnGallery() {
           <ScrollCue onClick={() => scrollToProgress(progressForCard(0))} />
         </div>
       </div>
+
+      {chapter && <ChapterOverlay key={chapter.key} season={chapter.season} />}
 
       <FrontAnnouncer card={CARDS[active]} />
 

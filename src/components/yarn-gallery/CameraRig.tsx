@@ -73,6 +73,9 @@ export function CameraRig({
   useFrame((state, dt) => {
     const step = Math.min(dt, 0.1);
     const damp = (lambda: number) => (reducedMotion ? 1 : 1 - Math.exp(-lambda * step));
+    // Measured every frame, so the camera and the page (which holds the
+    // scroll at each chapter) always agree on where the scroll is.
+    maxScroll.current = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
     const progress = THREE.MathUtils.clamp(window.scrollY / maxScroll.current, 0, 1);
 
     intro.current += (introOf(progress) - intro.current) * damp(3);

@@ -106,8 +106,16 @@ export const SEASON_NAME: Record<SeasonId, string> = {
   winter: 'WINTER',
 };
 
+/** Vertical distance between neighbouring cards within a season. */
+export const CARD_SPACING = 2.2;
+/**
+ * Extra yarn between one season's last card and the next season's first,
+ * around the knot: seasons are separate places on the reel, not one run of
+ * cards.
+ */
+export const SEASON_GAP = 5;
 /** Height of one season's stretch of yarn, in scene units. */
-export const SEASON_SPAN = 11;
+export const SEASON_SPAN = 5 * CARD_SPACING + SEASON_GAP;
 /** The yarn's first season starts at y = 0 and runs down. */
 export const seasonTop = (i: number) => -i * SEASON_SPAN;
 
@@ -288,19 +296,40 @@ export function spine(y: number): [number, number, number] {
 
 /**
  * The cards climb down the yarn in a helix, like the steps of a spiral
- * stair: each one a fifth of a turn round from the last and a fifth of a
- * season lower. Scrolling turns the camera round the yarn as it descends, so
- * one card after another swings to the front.
+ * stair: each one a fifth of a turn round from the last and a card's height
+ * lower. Scrolling turns the camera round the yarn as it descends, so one
+ * card after another swings to the front.
+ *
+ * Between seasons the stair breaks: a longer drop (SEASON_GAP) and an extra
+ * half turn, so by the time the new season's first card faces the camera the
+ * last season's cards are high above it and round the far side of the yarn.
  */
 export const CARDS_PER_SEASON = 5;
 export const CARD_COUNT = CARDS_PER_SEASON * YARN_SEASONS.length;
-export const CARD_SPACING = SEASON_SPAN / CARDS_PER_SEASON;
 export const HELIX_STEP = (72 * Math.PI) / 180;
+const SEASON_TURN = Math.PI;
 
-export const cardY = (i: number) => -CARD_SPACING * (i + 0.5);
-export const cardAngle = (i: number) => i * HELIX_STEP;
 export const seasonOfCard = (i: number) =>
   Math.min(YARN_SEASONS.length - 1, Math.max(0, Math.floor(i / CARDS_PER_SEASON)));
+
+/** Height and angle of card `n` (a whole card index). */
+const heightOf = (n: number) => {
+  const s = seasonOfCard(n);
+  return seasonTop(s) - SEASON_GAP / 2 - CARD_SPACING * (n - s * CARDS_PER_SEASON + 0.5);
+};
+const angleOf = (n: number) => n * HELIX_STEP + seasonOfCard(n) * SEASON_TURN;
+
+/** Interpolates a per-card value for any position, including between cards. */
+const between = (of: (n: number) => number, p: number) => {
+  const n0 = Math.floor(p);
+  const f = p - n0;
+  return f === 0 ? of(n0) : of(n0) + (of(n0 + 1) - of(n0)) * f;
+};
+
+/** Height of the helix at a position of the descent (in cards, may be fractional). */
+export const cardY = (p: number) => between(heightOf, p);
+/** Angle round the yarn at a position of the descent. */
+export const cardAngle = (p: number) => between(angleOf, p);
 
 /**
  * The first stretch of the scroll belongs to the opening: the name written in

@@ -13,6 +13,104 @@
   transition: opacity 1.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* The first beat of a new season: the scene blurs behind a light veil and
+   the season's name stands in front, then shrinks back and lifts. */
+.chapter {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+}
+
+.chapterVeil {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.28);
+  /* Unprefixed only: given both, the CSS compiler keeps just the -webkit-
+     one, which Chrome ignores. It adds the prefix itself where needed. */
+  backdrop-filter: blur(14px) saturate(1.1);
+  animation: chapter-veil var(--chapter-length) cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes chapter-veil {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  64% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.chapterTitle {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.6rem;
+  text-align: center;
+  animation: chapter-title var(--chapter-length) cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* In and up (0.3–0.8s), held, then away into depth (from 2.2s). */
+@keyframes chapter-title {
+  0%,
+  9% {
+    opacity: 0;
+    transform: translateY(24px) scale(1.04);
+    filter: blur(6px);
+  }
+  24% {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+  64% {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-3vh) scale(0.72);
+    filter: blur(4px);
+  }
+}
+
+.chapterNumber,
+.chapterLocal {
+  font-size: clamp(0.7rem, 1.1vw, 0.95rem);
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  color: var(--chapter-rim);
+}
+
+.chapterName {
+  font-size: clamp(3rem, 12vw, 11rem);
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  background: linear-gradient(90deg, var(--chapter-rim), var(--chapter-accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  /* No outline stroke: the font's overlapping contours would show through it. */
+  filter: drop-shadow(0 6px 30px rgba(255, 255, 255, 0.8));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chapterVeil,
+  .chapterTitle {
+    animation-duration: 1.6s;
+  }
+}
+
 /* A new season's sky opens as a widening circle over the old one. */
 .skyReveal {
   animation: sky-reveal 2.6s cubic-bezier(0.65, 0, 0.35, 1) both;
@@ -220,7 +318,6 @@ main[data-written='true'] .introInner .cue {
     0 0 0 1px rgba(36, 26, 32, 0.08),
     0 18px 40px -18px rgba(90, 60, 80, 0.35);
   backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   color: #241a20;
   transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }

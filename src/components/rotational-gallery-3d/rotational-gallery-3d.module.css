@@ -1,0 +1,268 @@
+/*
+ * Styles for the /rotationalGallery3D experiment only — isolated from
+ * globals.css and from the 2D experiment so either can be deleted alone.
+ */
+
+/* ── Background ─────────────────────────────────────────────────────────── */
+
+.background {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: linear-gradient(178deg, #fffaf4 0%, #fdf1ee 52%, #f8eef0 100%);
+}
+
+.wash {
+  position: absolute;
+  inset: -8%;
+  transition: opacity 2.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  will-change: transform;
+}
+
+.glowPeach {
+  width: 48vmax;
+  height: 34vmax;
+  left: -14vmax;
+  top: -10vmax;
+  background: #ffdcc8;
+  opacity: 0.3;
+  animation: g3-drift-a 60s ease-in-out infinite alternate;
+}
+
+.glowLavender {
+  width: 40vmax;
+  height: 36vmax;
+  right: -16vmax;
+  top: 10vh;
+  background: #e0d6f5;
+  opacity: 0.3;
+  animation: g3-drift-b 70s ease-in-out infinite alternate;
+}
+
+/* A pool of light the reel stands in — the only "room" there is. */
+.halo {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: min(120vw, 1500px);
+  height: 70vh;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(closest-side, rgba(255, 252, 246, 0.85), rgba(255, 252, 246, 0));
+}
+
+.grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.045;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .3 0 0 0 0 .2 0 0 0 0 .2 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@keyframes g3-drift-a {
+  to {
+    transform: translate3d(5vmax, 4vmax, 0) scale(1.06);
+  }
+}
+
+@keyframes g3-drift-b {
+  to {
+    transform: translate3d(-5vmax, 5vmax, 0) scale(0.94);
+  }
+}
+
+/* ── Stage ──────────────────────────────────────────────────────────────── */
+
+/* No overflow clip here (the page's <main> clips): clipping would cut the
+   floor shadow and the far arc of the reel at the stage's edge. */
+.stage {
+  position: relative;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  outline: none;
+}
+
+.stage[data-dragging='true'] {
+  cursor: grabbing;
+}
+
+/* Soft contact shadow and a satin sheen of floor — grounding, not a room. */
+.floor {
+  position: absolute;
+  left: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background:
+    radial-gradient(closest-side, rgba(92, 52, 58, 0.16), rgba(92, 52, 58, 0.05) 55%, transparent),
+    radial-gradient(closest-side, rgba(255, 255, 255, 0.6), transparent);
+  filter: blur(6px);
+}
+
+.scene {
+  position: absolute;
+  left: 50%;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+
+.rig {
+  position: absolute;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* The film track: two thin rails around the cylinder, one perforated. */
+.rail {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.railTop {
+  border: 2px dotted rgba(168, 134, 88, 0.45);
+}
+
+.railBottom {
+  border: 1px solid rgba(168, 134, 88, 0.38);
+}
+
+.item {
+  position: absolute;
+  transform-style: preserve-3d;
+  pointer-events: auto;
+}
+
+.face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* The film frame: cream stock, a hairline champagne edge, perforations. */
+.front {
+  display: flex;
+  flex-direction: column;
+  border-radius: 4px;
+  background: #fffbf4;
+  box-shadow:
+    0 0 0 1px rgba(190, 160, 112, 0.45),
+    0 40px 70px -40px rgba(74, 46, 34, 0.45);
+  will-change: opacity, filter;
+}
+
+.item[data-active='true'] .front {
+  box-shadow:
+    0 0 0 1px rgba(190, 160, 112, 0.55),
+    0 50px 90px -40px rgba(74, 46, 34, 0.5);
+}
+
+/* The back of a frame, seen through the far side of the reel. */
+.back {
+  transform: rotateY(180deg);
+  border-radius: 4px;
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.5), transparent 60%),
+    #efe3d4;
+  box-shadow: 0 0 0 1px rgba(168, 134, 88, 0.35);
+  opacity: 0.55;
+}
+
+.back::after {
+  content: '';
+  position: absolute;
+  inset: var(--g3-band) var(--g3-pad);
+  border-radius: 2px;
+  background: rgba(74, 46, 34, 0.08);
+}
+
+.perfs {
+  flex: none;
+  height: var(--g3-band);
+  background-image: radial-gradient(circle at center, rgba(168, 134, 88, 0.5) 0 1.5px, transparent 2px);
+  background-size: 12px 100%;
+  background-position: center;
+  background-repeat: repeat-x;
+}
+
+.photo {
+  position: relative;
+  flex: 1;
+  margin: 0 var(--g3-pad);
+  overflow: hidden;
+  border-radius: 2px;
+  background: #f1e5e1;
+}
+
+.photo img {
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+/* Light falling across the frame from the front of the installation. */
+.sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0.18), transparent 40%, rgba(74, 46, 34, 0.06));
+}
+
+.meta {
+  position: absolute;
+  inset: auto var(--g3-pad) 0 var(--g3-pad);
+  height: var(--g3-band);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 8px;
+  letter-spacing: 0.26em;
+  color: rgba(110, 86, 62, 0.8);
+  font-variant-numeric: tabular-nums;
+}
+
+.meta span {
+  background: #fffbf4;
+  padding: 0 4px;
+}
+
+/* ── Caption ────────────────────────────────────────────────────────────── */
+
+.caption {
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
+}
+
+.caption[data-leaving='true'] {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+
+.captionIn {
+  animation: g3-caption-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes g3-caption-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glow {
+    animation: none;
+  }
+}

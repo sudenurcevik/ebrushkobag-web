@@ -1,6 +1,6 @@
 import { SEASONS } from '../data/seasons';
 import { ARCHIVE, PRODUCTS } from '../data/products';
-import { HERO, STORY } from '../data/content';
+import { STORY } from '../data/content';
 import type { ImageRef } from '../data/types';
 import { MODELS } from '../data/configurator';
 import { allConfiguratorAssetPaths } from './asset-index';
@@ -48,14 +48,8 @@ const fromImage = (
 });
 
 export function seasonAssets(): AssetSpec[] {
-  const specs: AssetSpec[] = [
-    fromImage(
-      HERO.image,
-      'Açılış',
-      'Markayı tanıtan tam ekran kare. Sol alt üçte biri boş kalmalı; başlık oraya oturuyor.',
-      true,
-    ),
-  ];
+  // The opening is drawn (logo reel + film strip), so it asks for no photograph.
+  const specs: AssetSpec[] = [];
 
   for (const season of SEASONS) {
     specs.push(

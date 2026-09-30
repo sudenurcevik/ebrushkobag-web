@@ -280,7 +280,12 @@ export function YarnGallery() {
       {/* The scroll track: its height is the length of the descent. */}
       <div aria-hidden style={{ height: `${Math.round(CARD_COUNT * 55 * DESCENT_STRETCH) + 180}svh` }} />
 
-      <header className="fixed inset-x-0 top-0 z-10 flex items-center justify-between gap-4 px-5 pt-5 sm:px-10 sm:pt-7">
+      {/* The opening already spells the name, so the header waits for the
+          seasons to begin. */}
+      <header
+        className={`${styles.header} fixed inset-x-0 top-0 z-10 flex items-center justify-between gap-4 px-5 pt-5 sm:px-10 sm:pt-7`}
+        data-hidden={opening}
+      >
         <Link href="/yarnGallery" className="flex shrink-0 items-center gap-3" aria-label="EBRUSHKOBAG — iplik galerisi">
           <Logo size={32} priority />
           <span className="hidden font-display text-[0.95rem] font-semibold tracking-[0.18em] sm:inline">

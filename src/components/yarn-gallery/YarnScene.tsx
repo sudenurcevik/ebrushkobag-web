@@ -71,14 +71,12 @@ function Cards({
       for (const card of cards) {
         const key = faceKey(card);
         if (made.has(key)) continue;
-        const image = byId.get(card.photo.id)!.image as HTMLImageElement;
         made.set(
           key,
           paintCardFace({
             photo: card.photo,
             season: card.season,
             theme: CARD_THEME[card.season],
-            image,
             aspect: size.width / size.height,
             fonts,
           }),

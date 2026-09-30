@@ -4,17 +4,19 @@ import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { CARD_THEME, type YarnCard as Card } from '@/data/yarn-gallery';
+import { PANEL } from './cardFace';
 import { reel } from './reel';
 
 /**
- * One step of the helix around the yarn: a pane of frosted glass carrying
- * the photograph and its text (painted by cardFace.ts). The glass takes the
- * season's tint and its edge the season's metal (CARD_THEME).
+ * One step of the helix around the yarn: the photograph full bleed, with its
+ * text on a pane of frosted glass laid over it (type and HUD painted by
+ * cardFace.ts), in the season's colours (CARD_THEME).
  *
- * - **Glass.** Milky, half-clear: the reel behind shows through softly. Its
- *   rim catches light as the pane turns (a fresnel edge), a hairline of
- *   champagne outlines it, and a broad soft sheen slides across the surface
- *   as the reel rotates.
+ * - **Photograph and glass.** The panel frosts the photograph behind it and
+ *   washes it with the season's glass colour, with the backdrop's knitting
+ *   chart faint across it. The card's top-right corner is cut away; its rim
+ *   is an iridescent line of the season's two colours flowing slowly round,
+ *   and a broad sheen slides across as the reel turns.
  * - **Front and back.** The card facing the viewer is fully present; its
  *   neighbours drop right back into the season's sky — pale and mostly
  *   transparent — so the front card leads.
@@ -51,8 +53,11 @@ const fragmentShader = /* glsl */ `
   uniform float uSheen;    // position of the sliding light, -1 → 1
   uniform float uLight;
   uniform float uHover;
+  uniform float uTime;
+  uniform vec4 uPanel;     // glass panel in card UV: x0, y0, x1, y1
   uniform vec3 uGlass;
   uniform vec3 uRim;
+  uniform vec3 uAccent;
   uniform vec3 uPage;
   varying vec2 vUv;
   varying vec3 vNormalView;
@@ -67,7 +72,12 @@ const fragmentShader = /* glsl */ `
     vec2 half_ = uSize * 0.5;
     vec2 p = (vUv - 0.5) * uSize;
     float minSize = min(uSize.x, uSize.y);
-    float d = sdRoundBox(p, half_, 0.045 * minSize);
+
+    // Outline: a rounded rectangle with its top-right corner cut away.
+    float cut = 0.1 * minSize;
+    float dRect = sdRoundBox(p, half_, 0.035 * minSize);
+    float dCut = (p.x + p.y - (half_.x + half_.y - cut)) * 0.70711;
+    float d = max(dRect, dCut);
     float aa = fwidth(d) * 1.2;
     float shape = 1.0 - smoothstep(-aa, aa, d);
     if (shape < 0.01) discard;
@@ -75,44 +85,74 @@ const fragmentShader = /* glsl */ `
     vec2 uv = vUv;
     if (!gl_FrontFacing) uv.x = 1.0 - uv.x; // read correctly from behind too
 
-    // Frosted glass: milky, brighter towards the top, its edge catching the
-    // light as the pane turns.
-    float fresnel = pow(1.0 - abs(dot(normalize(vNormalView), normalize(vViewDir))), 2.2);
-    vec3 glass = uGlass * (0.97 + 0.05 * vUv.y);
-    // Frosted enough that what passes behind is only a shadow of itself.
-    float edge = smoothstep(-0.06 * minSize, 0.0, d);
-    float glassAlpha = 0.8 + 0.06 * vUv.y + 0.14 * fresnel - 0.25 * edge;
-    // A broad soft sheen sliding across as the reel turns.
-    float band = dot((vUv - 0.5) * 2.0, normalize(vec2(1.0, 0.55))) - uSheen * 1.8;
-    float sheen = exp(-band * band * 4.0) * 0.28;
-    glass += sheen + fresnel * 0.25;
-    glassAlpha += sheen * 0.4;
+    // The photograph, whole and uncropped: full height down the left of a
+    // wide card, full width across the top of a tall one. The rest of the
+    // card is its colour — the same photograph enlarged and blurred right
+    // out — into which it dissolves, and over which the glass panel sits.
+    float cardAspect = uSize.x / uSize.y;
+    bool wide = cardAspect > 1.0;
+    vec2 cover = cardAspect > uImageAspect ? vec2(1.0, uImageAspect / cardAspect) : vec2(cardAspect / uImageAspect, 1.0);
+    vec2 photoUv = (uv - 0.5) * cover + 0.5;
+    float extent = wide ? (uSize.y * uImageAspect) / uSize.x : min(1.0, (uSize.x / uImageAspect) / uSize.y);
+    vec2 sharpUv = wide ? vec2(uv.x / extent, uv.y) : vec2(uv.x, (uv.y - (1.0 - extent)) / extent);
+    float along = wide ? uv.x / extent : 1.0 - (uv.y - (1.0 - extent)) / extent;
+    float inPhoto = 1.0 - smoothstep(0.86, 1.0, along);
+    vec3 sharp = texture2D(uMap, clamp(sharpUv, 0.0, 1.0)).rgb;
+    vec3 bleed = vec3(0.0);
+    for (int i = 0; i < 10; i++) {
+      float fi = float(i);
+      float a = fi * 2.39996;
+      float r = 0.08 + 0.14 * sqrt(fi / 10.0);
+      bleed += texture2D(uMap, (uv - 0.5) * cover * 0.6 + 0.5 + vec2(cos(a), sin(a)) * r * cover).rgb;
+    }
+    bleed = mix(bleed / 10.0, uGlass, 0.25);
+    vec3 photo = mix(bleed, sharp, inPhoto);
 
-    // What the glass carries: the painted face, or — until the fonts are
-    // ready — the photograph alone, set into the pane.
-    vec4 face;
+    // The glass panel: the photograph behind it, frosted (a spiral of taps),
+    // washed with the season's glass colour, with a faint knitting chart.
+    vec2 pc = (uPanel.xy + uPanel.zw) * 0.5;
+    vec2 ph = (uPanel.zw - uPanel.xy) * 0.5;
+    float dPanel = sdRoundBox((uv - pc) * uSize, ph * uSize, 0.03 * minSize);
+    float inPanel = 1.0 - smoothstep(-aa, aa, dPanel);
+    vec3 frost = vec3(0.0);
+    for (int i = 0; i < 14; i++) {
+      float fi = float(i);
+      float a = fi * 2.39996;
+      float r = 0.012 + 0.055 * sqrt(fi / 14.0);
+      frost += texture2D(uMap, photoUv + vec2(cos(a), sin(a)) * r * cover).rgb;
+    }
+    frost /= 14.0;
+    vec3 glass = mix(frost, uGlass, 0.66) + 0.05;
+    vec2 cell = mod(p / (0.055 * minSize), 1.0) - 0.5;
+    float chart = max(step(abs(cell.x), 0.035) * step(abs(cell.y), 0.16), step(abs(cell.y), 0.035) * step(abs(cell.x), 0.16));
+    glass = mix(glass, uRim, chart * 0.1);
+    // Panel edge: a fine line of light.
+    float edge = 1.0 - smoothstep(0.0, aa * 1.5, abs(dPanel) - 0.0015 * minSize);
+
+    // The photograph darkens a touch towards the panel, so the glass reads.
+    float towards = smoothstep(0.35, 0.0, max(dPanel, 0.0) / minSize);
+    vec3 col = mix(photo * (1.0 - 0.18 * towards), glass, inPanel);
+    col = mix(col, vec3(1.0), edge * 0.7);
+
+    // What the glass carries: type and HUD (painted by cardFace.ts).
     if (uHasFace > 0.5) {
-      face = texture2D(uFace, uv);
-    } else {
-      float inset = 0.06 * minSize;
-      vec2 win = half_ - inset;
-      vec2 q = (uv - 0.5) * uSize / win * 0.5 + 0.5;
-      float winAspect = win.x / win.y;
-      vec2 s = winAspect > uImageAspect ? vec2(1.0, uImageAspect / winAspect) : vec2(winAspect / uImageAspect, 1.0);
-      float inPhoto = 1.0 - smoothstep(-aa, aa, sdRoundBox(p, win, 0.03 * minSize));
-      face = vec4(texture2D(uMap, (q - 0.5) * s + 0.5).rgb, inPhoto);
+      vec4 face = texture2D(uFace, uv);
+      col = mix(col, face.rgb, face.a);
     }
 
-    vec3 col = mix(glass, face.rgb, face.a);
-    float alpha = mix(glassAlpha, 1.0, face.a);
+    // The rim: an iridescent line in the season's colours, flowing round.
+    float rimBand = 1.0 - smoothstep(0.0, aa * 1.8, abs(d + 0.006 * minSize) - 0.005 * minSize);
+    float ang = atan(p.y, p.x);
+    vec3 rimCol = mix(uRim, uAccent, 0.5 + 0.5 * sin(ang * 2.0 + uTime * 0.8));
+    rimCol = mix(rimCol, vec3(1.0), pow(max(0.0, sin(ang * 3.0 - uTime * 1.3)), 8.0) * 0.8);
+    col = mix(col, rimCol, rimBand);
 
-    // A hairline of champagne just inside the edge, and a finer light line
-    // along the top as if the glass were bevelled.
-    float rimLine = 1.0 - smoothstep(0.0, aa * 1.5, abs(d + 0.006 * minSize) - 0.0022 * minSize);
-    float bevel = (1.0 - smoothstep(0.0, aa * 2.0, abs(d + 0.014 * minSize) - 0.0015 * minSize)) * step(0.0, p.y);
-    col = mix(col, uRim, rimLine * 0.85);
-    col = mix(col, vec3(1.0), bevel * 0.6);
-    alpha = max(alpha, rimLine * 0.9);
+    // A broad soft sheen sliding across as the reel turns, and the edge
+    // catching light as the card turns.
+    float band = dot((vUv - 0.5) * 2.0, normalize(vec2(1.0, 0.55))) - uSheen * 1.8;
+    col += exp(-band * band * 4.0) * 0.08;
+    float fresnel = pow(1.0 - abs(dot(normalize(vNormalView), normalize(vViewDir))), 2.2);
+    col += fresnel * 0.12;
 
     col *= uLight + uHover * 0.04;
     if (!gl_FrontFacing) col *= 0.94;
@@ -121,9 +161,8 @@ const fragmentShader = /* glsl */ `
     // clear, but keeping its colour (never greyed).
     float away = 1.0 - uPresence;
     col = mix(col, uPage, away * 0.55);
-    alpha *= mix(0.07, 1.0, uPresence);
 
-    gl_FragColor = vec4(col, alpha * shape);
+    gl_FragColor = vec4(col, shape * mix(0.07, 1.0, uPresence));
     #include <colorspace_fragment>
     #include <fog_fragment>
   }
@@ -207,6 +246,11 @@ export function YarnCard({
             uHover: { value: 0 },
             uGlass: { value: new THREE.Color(CARD_THEME[card.season].glass) },
             uRim: { value: new THREE.Color(CARD_THEME[card.season].rim) },
+            uAccent: { value: new THREE.Color(CARD_THEME[card.season].accent) },
+            uTime: { value: 0 },
+            uPanel: {
+              value: new THREE.Vector4(...(card.width > card.height ? PANEL.landscape : PANEL.portrait)),
+            },
             uPage: { value: new THREE.Color('#F7F1EC') },
           },
         ]),
@@ -249,6 +293,7 @@ export function YarnCard({
     u.uPresence.value += (target - u.uPresence.value) * k;
     // The sheen slides with the card's place in the turn.
     u.uSheen.value = THREE.MathUtils.clamp(card.index - reel.position, -1.2, 1.2);
+    u.uTime.value += dt;
     u.uLight.value += (0.9 + 0.12 * facing - u.uLight.value) * k;
     u.uHover.value += ((hovered.current ? 1 : 0) - u.uHover.value) * k;
 

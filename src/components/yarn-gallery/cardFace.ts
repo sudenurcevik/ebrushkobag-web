@@ -3,12 +3,12 @@ import type { SeasonId } from '@/data/types';
 import { SEASON_NAME, type CardTheme, type YarnPhoto } from '@/data/yarn-gallery';
 
 /**
- * What sits on the glass of an info card, painted once per photograph into
- * a transparent canvas: the photograph, lifted off the glass by a soft
- * shadow, and beside it (below it on phones) the season and number, the
- * name, the line of copy and the maker's mark. The glass itself is drawn by
- * the card's shader; everything here is what the glass carries, inked in the
- * season's colours, with the season's motif etched finely in the corner.
+ * The type and HUD of an info card, painted once per photograph and season
+ * into a transparent canvas laid over the card: corner brackets and a small
+ * code over the photograph, and inside the glass panel the season and
+ * number, the name, the line of copy, the season's motif and the maker's
+ * mark. The photograph, the frosted panel and the rim are drawn by the
+ * card's shader (YarnCard).
  * Titles are set in the page's modern display face (Unbounded, as in the
  * opening and the season rail), text in the site's sans.
  */
@@ -51,53 +51,9 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
   return lines;
 }
 
-/** Draws `image` to cover the rectangle, cropping the overflow. */
-function cover(
-  ctx: CanvasRenderingContext2D,
-  image: CanvasImageSource & { width: number; height: number },
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-) {
-  const scale = Math.max(w / image.width, h / image.height);
-  const sw = w / scale;
-  const sh = h / scale;
-  ctx.drawImage(image, (image.width - sw) / 2, (image.height - sh) / 2, sw, sh, x, y, w, h);
-}
-
 function spaced(ctx: CanvasRenderingContext2D, spacing: string) {
   // Letter-spacing on canvas is recent; where missing, the type is just tighter.
   (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = spacing;
-}
-
-/** The photograph on the glass: rounded, with a soft shadow beneath it. */
-function mountPhoto(
-  ctx: CanvasRenderingContext2D,
-  image: CanvasImageSource & { width: number; height: number },
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  radius: number,
-  unit: number,
-) {
-  ctx.save();
-  ctx.shadowColor = 'rgba(58, 36, 40, 0.22)';
-  ctx.shadowBlur = unit * 5;
-  ctx.shadowOffsetY = unit * 1.6;
-  ctx.fillStyle = '#FFFFFF';
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, radius);
-  ctx.fill();
-  ctx.restore();
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, radius);
-  ctx.clip();
-  cover(ctx, image, x, y, w, h);
-  ctx.restore();
 }
 
 /**
@@ -213,11 +169,21 @@ function etchMotif(ctx: CanvasRenderingContext2D, season: SeasonId, cx: number, 
   ctx.restore();
 }
 
+/**
+ * Where the glass panel sits on a card, in card UV (x0, y0, x1, y1; y up):
+ * down the right-hand side on wide cards, across the bottom on tall ones.
+ * The card's shader draws the frosted panel there; this painter sets the
+ * text inside it.
+ */
+export const PANEL = {
+  landscape: [0.545, 0.085, 0.95, 0.915] as const,
+  portrait: [0.06, 0.05, 0.94, 0.43] as const,
+};
+
 export function paintCardFace({
   photo,
   season,
   theme,
-  image,
   aspect,
   fonts,
 }: {
@@ -225,7 +191,6 @@ export function paintCardFace({
   /** The season the card hangs in: it sets the ink, the motif and the label. */
   season: SeasonId;
   theme: CardTheme;
-  image: CanvasImageSource & { width: number; height: number };
   /** Card width / height. */
   aspect: number;
   fonts: { display: string; sans: string };
@@ -238,79 +203,88 @@ export function paintCardFace({
   canvas.height = H;
   const ctx = canvas.getContext('2d')!;
   const unit = Math.min(W, H) / 100;
-  const pad = unit * 6;
 
-  let textX: number;
-  let textY: number;
-  let textW: number;
-  let bottom: number;
-
-  if (landscape) {
-    // Photograph on the left at 4:5, text on the right.
-    const ph = H - pad * 2;
-    const pw = ph * 0.8;
-    mountPhoto(ctx, image, pad, pad, pw, ph, unit * 2.2, unit);
-    textX = pad + pw + pad * 1.3;
-    textW = W - textX - pad * 1.3;
-    textY = pad + unit * 10;
-    bottom = H - pad - unit * 1.5;
-  } else {
-    // Photograph on top, text underneath.
-    const pw = W - pad * 2;
-    const ph = pw * 0.92;
-    mountPhoto(ctx, image, pad, pad, pw, ph, unit * 3, unit);
-    textX = pad + unit * 0.5;
-    textW = W - pad * 2 - unit;
-    textY = pad + ph + unit * 11;
-    bottom = H - pad - unit * 0.5;
+  // ── HUD over the photograph: corner brackets and a small code ──────────
+  const inset = unit * 4.5;
+  const arm = unit * 6;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+  ctx.lineWidth = Math.max(2, unit * 0.35);
+  ctx.lineCap = 'round';
+  const corners: [number, number, number, number][] = [
+    [inset, inset, 1, 1],
+    [W - inset, H - inset, -1, -1],
+    [inset, H - inset, 1, -1],
+  ];
+  for (const [x, y, dx, dy] of corners) {
+    ctx.beginPath();
+    ctx.moveTo(x, y + dy * arm);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x + dx * arm, y);
+    ctx.stroke();
   }
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+  ctx.font = `500 ${unit * 2}px ${fonts.display}`;
+  spaced(ctx, `${unit * 0.5}px`);
+  ctx.fillText(`EBK · ${SEASON_NAME[season].slice(0, 3)} ${String(photo.number).padStart(2, '0')}`, inset + unit * 1.5, inset + unit * 5);
+  spaced(ctx, '0px');
 
-  // Season / number
+  // ── The text, inside the glass panel ───────────────────────────────────
+  const [px0, py0, px1, py1] = landscape ? PANEL.landscape : PANEL.portrait;
+  const left = px0 * W;
+  const right = px1 * W;
+  const top = (1 - py1) * H;
+  const bottom = (1 - py0) * H;
+  const pad = unit * (landscape ? 4.5 : 5);
+  const textX = left + pad;
+  const textW = right - left - pad * 2;
+  let y = top + pad + unit * 2.5;
+
+  // Season and number, in the season's colour, with a small index on the right.
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = theme.inkMuted;
   ctx.font = `500 ${unit * (landscape ? 2.1 : 2.8)}px ${fonts.display}`;
   spaced(ctx, `${unit * 0.6}px`);
-  ctx.fillText(`${SEASON_NAME[season]}  —  ${String(photo.number).padStart(2, '0')}`, textX, textY);
+  ctx.fillText(SEASON_NAME[season], textX, y);
+  ctx.textAlign = 'right';
+  ctx.fillText(String(photo.number).padStart(2, '0'), right - pad, y);
+  ctx.textAlign = 'left';
   spaced(ctx, '0px');
 
-  // Title, light and wide
-  const titleSize = unit * (landscape ? 6.6 : 7.4);
+  // Title
+  const titleSize = unit * (landscape ? 6.2 : 7.2);
   ctx.fillStyle = theme.ink;
   ctx.font = `300 ${titleSize}px ${fonts.display}`;
   spaced(ctx, `${-titleSize * 0.02}px`);
-  let y = textY + unit * 4.5 + titleSize;
+  y += unit * 4 + titleSize;
   for (const line of wrap(ctx, photo.title, textW)) {
     ctx.fillText(line, textX, y);
-    y += titleSize * 1.18;
+    y += titleSize * 1.16;
   }
   spaced(ctx, '0px');
 
   // A short rule in the season's colour
   ctx.fillStyle = theme.rim;
-  ctx.fillRect(textX, y + unit * 0.4, unit * 6, Math.max(2, unit * 0.35));
-  y += unit * 5.5;
+  ctx.fillRect(textX, y + unit * 0.2, unit * 6, Math.max(2, unit * 0.35));
+  y += unit * 5;
 
   // Description
-  const bodySize = unit * (landscape ? 3.0 : 3.9);
+  const bodySize = unit * (landscape ? 2.9 : 3.8);
   ctx.fillStyle = theme.inkSoft;
   ctx.font = `400 ${bodySize}px ${fonts.sans}`;
-  for (const line of wrap(ctx, photo.description, Math.min(textW, unit * (landscape ? 56 : 100)))) {
+  for (const line of wrap(ctx, photo.description, textW)) {
     ctx.fillText(line, textX, y);
-    y += bodySize * 1.6;
+    y += bodySize * 1.55;
   }
 
-  // The season's motif, etched in the corner of the text column.
-  const motif = unit * (landscape ? 13 : 12);
-  const motifX = W - pad - motif * 0.55;
-  const motifY = bottom - motif * 0.5 - unit * (landscape ? 0 : 1);
-  if (y + motif * 0.2 < motifY - motif * 0.5 || landscape) etchMotif(ctx, season, motifX, motifY, motif, theme.accent);
-
-  // Maker's mark at the foot of the text column — only if the copy leaves room.
-  if (y + unit * 2 < bottom) {
+  // The season's motif and the maker's mark at the foot of the panel.
+  const foot = bottom - pad;
+  const motif = unit * (landscape ? 10 : 9);
+  if (y + motif * 0.4 < foot - motif) etchMotif(ctx, season, right - pad - motif * 0.5, foot - motif * 0.5, motif, theme.accent);
+  if (y + unit * 2 < foot) {
     ctx.fillStyle = theme.inkSoft;
     ctx.font = `500 ${unit * (landscape ? 1.6 : 2.2)}px ${fonts.display}`;
     spaced(ctx, `${unit * 0.6}px`);
-    ctx.fillText('EBRUSHKOBAG  ·  EL ÖRGÜSÜ', textX, bottom);
+    ctx.fillText('EBRUSHKOBAG  ·  EL ÖRGÜSÜ', textX, foot);
     spaced(ctx, '0px');
   }
 

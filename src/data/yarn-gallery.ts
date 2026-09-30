@@ -399,10 +399,15 @@ export const seasonBoundary = (s: number) => s * CARDS_PER_SEASON - 0.5;
 
 /**
  * The beats of a change of season, in seconds from the moment the sky
- * changes: the title appears in front, holds, glides back behind the spine
- * and has settled — and until then the page holds the scroll.
+ * changes (the chapter keyframes in the module CSS follow these times):
+ *
+ * - `open`: the new sky and the chapter have opened, as one circle from the
+ *   middle of the screen, the season's name large in front of a blurred scene
+ * - `leave`: the chapter starts closing, the same circle run back
+ * - `settled`: closed on the spine, the name settled behind it; the page
+ *   holds the scroll until here
  */
-export const CHAPTER = { appear: 0.3, shown: 0.8, leave: 2.2, settled: 3.4 };
+export const CHAPTER = { open: 1.3, leave: 2.9, settled: 4 };
 
 /** Card size: landscape info cards on wide screens, portrait on phones. */
 export const cardSize = (compact: boolean) =>

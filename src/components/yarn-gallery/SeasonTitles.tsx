@@ -12,7 +12,7 @@ import {
   YARN_SEASONS,
   cardAngle,
   cardY,
-  seasonBoundary,
+  CARDS_PER_SEASON,
   seasonOfCard,
   spine,
 } from '@/data/yarn-gallery';
@@ -115,11 +115,11 @@ function Title({ season, index, texture, compact }: { season: SeasonId; index: n
   );
   useEffect(() => () => material.dispose(), [material]);
 
-  // Where it stands: at the knot (or just above the first card, for
-  // spring), behind the spine as seen from where the camera will be.
-  const at = index === 0 ? 0 : seasonBoundary(index);
+  // Where it stands: just above the season's first card — where the eye
+  // opens after the chapter — behind the spine as seen from there.
+  const at = index * CARDS_PER_SEASON;
   const angle = cardAngle(at);
-  const y = cardY(at) + (index === 0 ? 0.9 : 0.4);
+  const y = cardY(at) + 0.9;
   const [sx, , sz] = spine(y);
   const back = compact ? 2.6 : 3.4;
   const width = compact ? 7 : 12.5;
@@ -140,12 +140,11 @@ function Title({ season, index, texture, compact }: { season: SeasonId; index: n
     if (here && since.current < 0) since.current = now;
     if (!here) since.current = -1;
 
-    // The page shows the name in front, over a blurred scene; as that lifts
-    // (CHAPTER.leave → settled), this one takes its place behind the spine.
+    // The page shows the name in front, over a blurred scene; as that closes
+    // (CHAPTER.leave → settled) this one is revealed behind the spine.
     const t = since.current < 0 ? -1 : now - since.current;
-    const settle = t < 0 ? 0 : THREE.MathUtils.smootherstep(t, CHAPTER.leave + 0.3, CHAPTER.settled + 0.4);
-    const onward = index === 0 ? reel.position : delta;
-    const stay = 1 - THREE.MathUtils.smoothstep(onward, 0.55, 1.2);
+    const settle = t < 0 ? 0 : THREE.MathUtils.smootherstep(t, CHAPTER.leave + 0.2, CHAPTER.settled);
+    const stay = 1 - THREE.MathUtils.smoothstep(delta, 0.55, 1.2);
     const target = settle * stay;
     shown.current += (target - shown.current) * (1 - Math.exp(-dt * (target > shown.current ? 4 : 5)));
     const presence = shown.current;

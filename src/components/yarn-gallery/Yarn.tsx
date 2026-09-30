@@ -42,6 +42,41 @@ export const PLY_TWIST = -1.6;
 const STEP = 0.1;
 
 /**
+ * The top of the spine forks: over its last FORK_LENGTH the two strands
+ * stop laying round each other and part, like an unplied end, reaching up
+ * into the ball of yarn. The cord from the ball splits the same way where it
+ * comes down to meet them (see YarnWord), so the ball and the spine join
+ * strand to strand — an opening in the yarn, not a seam.
+ */
+const FORK_LENGTH = 2.2;
+const FORK_SPLAY = 0.34;
+/** How far open the fork is `arc` down from the top: 1 at the top, 0 below the fork. */
+const forkOpen = (arc: number) => (1 - THREE.MathUtils.smoothstep(arc, 0, FORK_LENGTH)) ** 2;
+/**
+ * Length along which the lay turns: slowing to a stop towards the top, so
+ * the parting strands fan straight out rather than spiralling. Continuous
+ * in value and rate with the plain lay below the fork.
+ */
+const layArc = (arc: number) => (arc >= FORK_LENGTH ? arc : FORK_LENGTH / 2 + (arc * arc) / (2 * FORK_LENGTH));
+
+/** Where the spine's two strands end, at the top of the fork (strand 0, then strand 1). */
+export function forkTips(): [THREE.Vector3, THREE.Vector3] {
+  // The yarn's first frame, as framesAlong makes it.
+  const top = yarnLine(YARN_TOP);
+  const t = yarnLine(YARN_TOP - STEP).sub(top).normalize();
+  const n = new THREE.Vector3(1, 0, 0).addScaledVector(t, -t.x).normalize();
+  const b = new THREE.Vector3().crossVectors(t, n).normalize();
+  const offset = STRAND_OFFSET + FORK_SPLAY;
+  const lay = layArc(0) * STRAND_TWIST * Math.PI * 2;
+  return [0, Math.PI].map((phase) =>
+    top
+      .clone()
+      .addScaledVector(n, Math.cos(lay + phase) * offset)
+      .addScaledVector(b, Math.sin(lay + phase) * offset),
+  ) as [THREE.Vector3, THREE.Vector3];
+}
+
+/**
  * Where the yarn itself lies: the camera's S plus a slow wander and a
  * faster, smaller kink, so it never runs quite straight.
  */
@@ -185,6 +220,19 @@ function wind(path: Omit<Path, 'ranges'>, offset: number, twist: number, phase: 
   return out;
 }
 
+/** One strand's centre line: the lay round the yarn's path, parting at the fork. */
+function windStrand(path: Omit<Path, 'ranges'>, phase: number) {
+  return path.points.map((point, i) => {
+    const arc = path.lengths[i];
+    const angle = layArc(arc) * STRAND_TWIST * Math.PI * 2 + phase;
+    const offset = STRAND_OFFSET + FORK_SPLAY * forkOpen(arc);
+    return point
+      .clone()
+      .addScaledVector(path.normals[i], Math.cos(angle) * offset)
+      .addScaledVector(path.binormals[i], Math.sin(angle) * offset);
+  });
+}
+
 /** Diagonal fibre lines, used as a bump map so each ply reads as spun fibre. */
 export function fibreTexture() {
   const canvas = document.createElement('canvas');
@@ -275,7 +323,7 @@ export function Yarn({ compact, reducedMotion }: { compact: boolean; reducedMoti
   // The two strands' centre lines, wound round the yarn's path for its whole
   // length (so the lay runs unbroken through the seasons), with their own frames.
   const strands = useMemo(
-    () => [0, Math.PI].map((phase) => framesAlong(wind(path, STRAND_OFFSET, STRAND_TWIST, phase))),
+    () => [0, Math.PI].map((phase) => framesAlong(windStrand(path, phase))),
     [path],
   );
 

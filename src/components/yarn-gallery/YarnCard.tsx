@@ -4,7 +4,7 @@ import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { CARD_THEME, type YarnCard as Card } from '@/data/yarn-gallery';
-import { PANEL } from './cardFace';
+import { PANEL, PHOTO_SHARE } from './cardFace';
 import { reel } from './reel';
 
 /**
@@ -85,18 +85,21 @@ const fragmentShader = /* glsl */ `
     vec2 uv = vUv;
     if (!gl_FrontFacing) uv.x = 1.0 - uv.x; // read correctly from behind too
 
-    // The photograph, whole and uncropped: full height down the left of a
-    // wide card, full width across the top of a tall one. The rest of the
-    // card is its colour — the same photograph enlarged and blurred right
-    // out — into which it dissolves, and over which the glass panel sits.
+    // The photograph fills its own share of the card (PHOTO_SHARE: down the
+    // left of a wide card, across the top of a tall one), cover-fitted; the
+    // rest of the card is its colour — the same photograph enlarged and
+    // blurred right out — into which it dissolves, under the glass panel.
     float cardAspect = uSize.x / uSize.y;
     bool wide = cardAspect > 1.0;
     vec2 cover = cardAspect > uImageAspect ? vec2(1.0, uImageAspect / cardAspect) : vec2(cardAspect / uImageAspect, 1.0);
     vec2 photoUv = (uv - 0.5) * cover + 0.5;
-    float extent = wide ? (uSize.y * uImageAspect) / uSize.x : min(1.0, (uSize.x / uImageAspect) / uSize.y);
-    vec2 sharpUv = wide ? vec2(uv.x / extent, uv.y) : vec2(uv.x, (uv.y - (1.0 - extent)) / extent);
-    float along = wide ? uv.x / extent : 1.0 - (uv.y - (1.0 - extent)) / extent;
-    float inPhoto = 1.0 - smoothstep(0.86, 1.0, along);
+    float share = wide ? ${PHOTO_SHARE.landscape.toFixed(3)} : ${PHOTO_SHARE.portrait.toFixed(3)};
+    float regionAspect = wide ? cardAspect * share : cardAspect / share;
+    vec2 regionCover = regionAspect > uImageAspect ? vec2(1.0, uImageAspect / regionAspect) : vec2(regionAspect / uImageAspect, 1.0);
+    vec2 local = wide ? vec2(uv.x / share, uv.y) : vec2(uv.x, (uv.y - (1.0 - share)) / share);
+    vec2 sharpUv = (local - 0.5) * regionCover + 0.5;
+    float along = wide ? local.x : 1.0 - local.y;
+    float inPhoto = 1.0 - smoothstep(0.9, 1.0, along);
     vec3 sharp = texture2D(uMap, clamp(sharpUv, 0.0, 1.0)).rgb;
     vec3 bleed = vec3(0.0);
     for (int i = 0; i < 10; i++) {

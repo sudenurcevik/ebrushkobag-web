@@ -170,14 +170,20 @@ function etchMotif(ctx: CanvasRenderingContext2D, season: SeasonId, cx: number, 
 }
 
 /**
+ * The photograph's share of a card: its width on wide cards (the left),
+ * its height on tall ones (the top). The information panel has the rest.
+ */
+export const PHOTO_SHARE = { landscape: 0.62, portrait: 0.6 };
+
+/**
  * Where the glass panel sits on a card, in card UV (x0, y0, x1, y1; y up):
- * down the right-hand side on wide cards, across the bottom on tall ones.
- * The card's shader draws the frosted panel there; this painter sets the
- * text inside it.
+ * in the rest of the card beside the photograph — down the right-hand side
+ * on wide cards, across the bottom on tall ones. The card's shader draws the
+ * frosted panel there; this painter sets the text inside it.
  */
 export const PANEL = {
-  landscape: [0.545, 0.085, 0.95, 0.915] as const,
-  portrait: [0.06, 0.05, 0.94, 0.43] as const,
+  landscape: [0.642, 0.075, 0.96, 0.925] as const,
+  portrait: [0.05, 0.04, 0.95, 0.38] as const,
 };
 
 export function paintCardFace({
@@ -234,7 +240,7 @@ export function paintCardFace({
   const right = px1 * W;
   const top = (1 - py1) * H;
   const bottom = (1 - py0) * H;
-  const pad = unit * (landscape ? 4.5 : 5);
+  const pad = unit * (landscape ? 4 : 4.5);
   const textX = left + pad;
   const textW = right - left - pad * 2;
   let y = top + pad + unit * 2.5;
@@ -251,7 +257,7 @@ export function paintCardFace({
   spaced(ctx, '0px');
 
   // Title
-  const titleSize = unit * (landscape ? 6.2 : 7.2);
+  const titleSize = unit * (landscape ? 5.4 : 6.6);
   ctx.fillStyle = theme.ink;
   ctx.font = `300 ${titleSize}px ${fonts.display}`;
   spaced(ctx, `${-titleSize * 0.02}px`);
@@ -268,7 +274,7 @@ export function paintCardFace({
   y += unit * 5;
 
   // Description
-  const bodySize = unit * (landscape ? 2.9 : 3.8);
+  const bodySize = unit * (landscape ? 2.6 : 3.5);
   ctx.fillStyle = theme.inkSoft;
   ctx.font = `400 ${bodySize}px ${fonts.sans}`;
   for (const line of wrap(ctx, photo.description, textW)) {
@@ -278,7 +284,7 @@ export function paintCardFace({
 
   // The season's motif and the maker's mark at the foot of the panel.
   const foot = bottom - pad;
-  const motif = unit * (landscape ? 10 : 9);
+  const motif = unit * (landscape ? 8.5 : 8);
   if (y + motif * 0.4 < foot - motif) etchMotif(ctx, season, right - pad - motif * 0.5, foot - motif * 0.5, motif, theme.accent);
   if (y + unit * 2 < foot) {
     ctx.fillStyle = theme.inkSoft;

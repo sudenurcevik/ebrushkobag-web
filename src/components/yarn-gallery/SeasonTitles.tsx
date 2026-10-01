@@ -1,6 +1,6 @@
 'use client';
 
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { SeasonId } from '@/data/types';
@@ -12,7 +12,7 @@ import {
   YARN_SEASONS,
   cardAngle,
   cardY,
-  seasonBoundary,
+  CARDS_PER_SEASON,
   seasonOfCard,
   spine,
 } from '@/data/yarn-gallery';
@@ -24,11 +24,11 @@ import { reel } from './reel';
  * timed from the moment the page changes the sky (the front card entering
  * the season, or the opening ending) — while the page holds the scroll:
  *
- * 1. As the new sky opens, the season's name appears in front of
- *    everything, large and readable — its number, its name in hollow
- *    letters washed with its colours, its Turkish name.
- * 2. It holds there a moment, then glides back into depth and settles
- *    behind the spine, where the yarn passes in front of it.
+ * 1. As the new sky opens, the page blurs the scene and shows the season's
+ *    name in front of everything, large and readable (ChapterOverlay).
+ * 2. As that lifts, this title takes its place behind the spine — huge
+ *    hollow letters washed with the season's colours, its number and its
+ *    Turkish name — where the yarn passes in front of it.
  * 3. It stays there, drifting a little, until the descent moves on.
  */
 
@@ -97,13 +97,7 @@ function paintTitle(season: SeasonId, index: number, fonts: { display: string; s
 }
 
 const right = new THREE.Vector3();
-const behind = new THREE.Vector3();
-const inFront = new THREE.Vector3();
-const ahead = new THREE.Vector3();
-const facing = new THREE.Quaternion();
-const UP = new THREE.Vector3(0, 1, 0);
-/** How far in front of the camera the title appears before gliding back. */
-const FRONT_DISTANCE = 6;
+
 
 function Title({ season, index, texture, compact }: { season: SeasonId; index: number; texture: THREE.Texture; compact: boolean }) {
   const mesh = useRef<THREE.Mesh>(null);
@@ -121,18 +115,17 @@ function Title({ season, index, texture, compact }: { season: SeasonId; index: n
   );
   useEffect(() => () => material.dispose(), [material]);
 
-  // Where it stands: at the knot (or just above the first card, for
-  // spring), behind the spine as seen from where the camera will be.
-  const at = index === 0 ? 0 : seasonBoundary(index);
+  // Where it stands: just above the season's first card — where the eye
+  // opens after the chapter — behind the spine as seen from there.
+  const at = index * CARDS_PER_SEASON;
   const angle = cardAngle(at);
-  const y = cardY(at) + (index === 0 ? 0.9 : 0.4);
+  const y = cardY(at) + 0.9;
   const [sx, , sz] = spine(y);
   const back = compact ? 2.6 : 3.4;
   const width = compact ? 7 : 12.5;
 
   const since = useRef(-1);
   const shown = useRef(0);
-  const camera = useThree((s) => s.camera);
 
   useFrame((state, dt) => {
     const m = mesh.current;
@@ -147,32 +140,22 @@ function Title({ season, index, texture, compact }: { season: SeasonId; index: n
     if (here && since.current < 0) since.current = now;
     if (!here) since.current = -1;
 
+    // The page shows the name in front, over a blurred scene; as that closes
+    // (CHAPTER.leave → settled) this one is revealed behind the spine.
     const t = since.current < 0 ? -1 : now - since.current;
-    const appear = t < 0 ? 0 : THREE.MathUtils.smoothstep(t, CHAPTER.appear, CHAPTER.shown);
-    // 0 while it holds in front of the camera, 1 once it has settled behind the spine.
-    const settle = t < 0 ? 1 : THREE.MathUtils.smootherstep(t, CHAPTER.leave, CHAPTER.settled);
-    const onward = index === 0 ? reel.position : delta;
-    const stay = 1 - THREE.MathUtils.smoothstep(onward, 0.55, 1.2);
-    const target = appear * (settle < 1 ? 1 : stay);
+    const settle = t < 0 ? 0 : THREE.MathUtils.smootherstep(t, CHAPTER.leave + 0.2, CHAPTER.settled);
+    const stay = 1 - THREE.MathUtils.smoothstep(delta, 0.55, 1.2);
+    const target = settle * stay;
     shown.current += (target - shown.current) * (1 - Math.exp(-dt * (target > shown.current ? 4 : 5)));
     const presence = shown.current;
     material.opacity = presence;
     m.visible = presence > 0.005;
 
-    // Behind the spine, drifting a little as you scroll through the knot.
+    // Behind the spine, drifting a little as you scroll through the knot,
+    // settling back from slightly larger as it arrives.
     right.set(Math.cos(angle), 0, -Math.sin(angle));
-    behind.set(sx - Math.sin(angle) * back, y, sz - Math.cos(angle) * back).addScaledVector(right, -delta * 1.2);
-    // In front: a few units ahead of the camera, square to it.
-    camera.getWorldDirection(ahead);
-    inFront.copy(camera.position).addScaledVector(ahead, FRONT_DISTANCE);
-    m.position.lerpVectors(inFront, behind, settle);
-    facing.setFromAxisAngle(UP, angle);
-    m.quaternion.copy(camera.quaternion).slerp(facing, settle);
-    m.scale.setScalar(THREE.MathUtils.lerp(compact ? 0.34 : 0.46, 1, settle));
-    // Drawn over everything while it is in front; among the yarn once it is behind.
-    const infront = settle < 0.5;
-    material.depthTest = !infront;
-    m.renderOrder = infront ? 1000 : -10;
+    m.position.set(sx - Math.sin(angle) * back, y, sz - Math.cos(angle) * back).addScaledVector(right, -delta * 1.2);
+    m.scale.setScalar(1.12 - 0.12 * settle);
   });
 
   return (

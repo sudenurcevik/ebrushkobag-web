@@ -13,6 +13,7 @@ import {
   STRAND_OFFSET,
   STRAND_TWIST,
   fibreTexture,
+  forkTips,
   yarnLine,
 } from './Yarn';
 import { reel } from './reel';
@@ -29,6 +30,15 @@ import { reel } from './reel';
  * and settles over it, so the spine comes straight out of the ball — the
  * whole descent unwinds from it, with no join to see. Scrolling back unwinds
  * the ball and writes the name again.
+ *
+ * Where the cord leads out of the ball to the spine, its two strands part
+ * and meet the spine's own parted strands (the fork at the top of the spine,
+ * in Yarn), so the two join strand to strand.
+ *
+ * The hook stays with the cord throughout: after writing it rests at the
+ * end of the curl, as if about to go on; as the name is wound up it works
+ * round the ball, tucking in each wrap; and when the ball drops onto the
+ * spine it lifts away.
  *
  * The cord is drawn by the GPU. Its centre line lives in a small data
  * texture (position, normal, binormal and running length per sample); every
@@ -56,6 +66,8 @@ const WIND_SHARE = 0.62;
  * the ball once it comes to rest there.
  */
 const TUCKED_END = 0.03;
+/** The share of the cord, at its end, over which its strands part to meet the spine's fork. */
+const SPLIT = TUCKED_END * 0.55;
 /**
  * The name is written in a finer cord (finer still on phones, where the
  * letters are smaller), which thickens to the spine's as it unravels.
@@ -216,6 +228,15 @@ const from = new THREE.Vector3();
 const spineTop = yarnLine(YARN_TOP);
 
 const HOLD = new THREE.Vector3(0.35, 0.75, 0.6);
+const REST_AXIS = new THREE.Vector3(0.05, 1, 0.45).normalize();
+/** The spine's fork tips, from the top of the spine. */
+const FORK_OFFSETS = forkTips().map((tip) => tip.sub(spineTop));
+const endNormal = new THREE.Vector3();
+const endBinormal = new THREE.Vector3();
+const onBall = new THREE.Vector3();
+const outward = new THREE.Vector3();
+const wrap = new THREE.Vector3();
+const tipAxis = new THREE.Vector3();
 const tangent = new THREE.Vector3();
 const axis = new THREE.Vector3();
 const side = new THREE.Vector3();
@@ -272,6 +293,11 @@ const VERTEX_DECLS = /* glsl */ `
   uniform float uThickness;
   uniform float uTime;
   uniform float uIdle;
+  uniform float uFork;
+  uniform float uArcEnd;
+  uniform float uLayFix;
+  uniform vec3 uForkA;
+  uniform vec3 uForkB;
   attribute float aS;
   attribute float aTheta;
   attribute float aPly;
@@ -298,13 +324,20 @@ const VERTEX_CORD = /* glsl */ `
   c.xyz += vec3(0.0, sin(arc * 0.7 - uTime * 1.3) * 0.05, sin(arc * 0.9 - uTime * 1.6) * 0.16) * uIdle;
   float strand = floor(aPly / ${PLY_COUNT}.0);
   float ply = aPly - strand * ${PLY_COUNT}.0;
-  float sa = arc * ${STRAND_TWIST.toFixed(4)} * 6.2831853 + strand * 3.1415927;
+  // Towards the spine the lay stops turning and swings round so each strand
+  // lines up with its own tip of the spine's fork; then the strands part to
+  // those tips.
+  float layStill = uFork * smoothstep(1.0 - ${(SPLIT * 2.4).toFixed(5)}, 1.0 - ${SPLIT.toFixed(5)}, aS);
+  float sa = mix(arc, uArcEnd, layStill) * ${STRAND_TWIST.toFixed(4)} * 6.2831853 + strand * 3.1415927 + uLayFix * layStill;
   vec3 strandCentre = c.xyz + (N * cos(sa) + B * sin(sa)) * ${STRAND_OFFSET.toFixed(4)} * uThickness;
+  float parted = uFork * smoothstep(1.0 - ${SPLIT.toFixed(5)}, 1.0, aS);
+  strandCentre = mix(strandCentre, c.xyz + (strand < 0.5 ? uForkA : uForkB) * parted, parted);
   float pa = arc * ${PLY_TWIST.toFixed(4)} * 6.2831853 + ply * 2.0943951;
   vec3 plyCentre = strandCentre + (N * cos(pa) + B * sin(pa)) * ${PLY_OFFSET.toFixed(4)} * uThickness;
   vec3 radial = N * cos(aTheta) + B * sin(aTheta);
-  // Tapered at the very start, and at the tip still being written.
-  float taper = smoothstep(0.0, 0.004, aS) * clamp((uReveal - aS) / 0.006, 0.0, 1.0);
+  // Tapered at the very start, and at the tip still being written — but not
+  // where it joins the spine.
+  float taper = smoothstep(0.0, 0.004, aS) * max(clamp((uReveal - aS) / 0.006, 0.0, 1.0), uFork);
   vec3 cordPosition = plyCentre + radial * ${PLY_RADIUS.toFixed(4)} * uThickness * taper;
   vS = aS;
   vPly = aPly;
@@ -456,6 +489,11 @@ export function YarnWord({
       uTime: { value: 0 },
       uIdle: { value: 0 },
       uColorMix: { value: 0 },
+      uFork: { value: 0 },
+      uArcEnd: { value: 0 },
+      uLayFix: { value: 0 },
+      uForkA: { value: FORK_OFFSETS[0].clone() },
+      uForkB: { value: FORK_OFFSETS[1].clone() },
       uBrand: { value: BRAND_PLIES.map((c) => new THREE.Color(c)) },
       uSpring: { value: YARN_PRESETS.spring.strands.flat().map((c) => new THREE.Color(c)) },
     }),
@@ -499,7 +537,9 @@ export function YarnWord({
 
   const hookRef = useRef<THREE.Group>(null);
   const poseRef = useRef<THREE.Group>(null);
-  const writing = useRef({ started: -1, done: reducedMotion ? 1 : 0, lastIntro: -1, told: false, idle: 0 });
+  const writing = useRef({ started: -1, done: reducedMotion ? 1 : 0, lastIntro: -1, told: false, idle: 0, layFix: 0 });
+  // Where the hook is working on the ball, eased so it glides from wrap to wrap.
+  const onBallAt = useRef({ position: new THREE.Vector3(), axis: new THREE.Vector3(0, 1, 0), set: false });
   const group = useRef<THREE.Group>(null);
   const points = useMemo(() => written.map((p) => p.clone()), [written]);
 
@@ -575,36 +615,90 @@ export function YarnWord({
       }
       frames(points, data);
       texture.needsUpdate = true;
+
+      // Once the cord has reached the spine, its strands swing round to meet
+      // the fork: the turn that brings strand 0 onto the first tip, taken
+      // the short way from last frame's (so it never jumps a whole turn).
+      uniforms.uFork.value = THREE.MathUtils.smoothstep(wind, 0.6, 1);
+      const n = samples;
+      const last = n - 1;
+      const arcEnd = data[last * 4 + 3];
+      endNormal.fromArray(data, (n + last) * 4);
+      endBinormal.fromArray(data, (2 * n + last) * 4);
+      const want = Math.atan2(FORK_OFFSETS[0].dot(endBinormal), FORK_OFFSETS[0].dot(endNormal));
+      let fix = want - arcEnd * STRAND_TWIST * TAU;
+      fix = w.layFix + THREE.MathUtils.euclideanModulo(fix - w.layFix + Math.PI, TAU) - Math.PI;
+      w.layFix = fix;
+      uniforms.uArcEnd.value = arcEnd;
+      uniforms.uLayFix.value = fix;
     }
 
     // The hook works at the tip of the cord: held like a pen, trailing the
     // direction of writing, its throat facing the way the cord comes from.
-    // Each stitch of cord laid, it dips in and turns — a yarn-over — then
-    // when the name is done it lifts away.
+    // Each stitch of cord laid, it dips in and turns — a yarn-over. When the
+    // name is done it rests there at the end of the curl, as if to go on.
+    // Winding, it moves onto the ball and works round it, at the wrap being
+    // drawn in; as the ball drops onto the spine it lifts away.
     const hook = hookRef.current;
     const pose = poseRef.current;
     if (hook && pose) {
-      const away = THREE.MathUtils.clamp((elapsed - WRITE_SECONDS - 0.3) / 1.1, 0, 1);
-      hook.visible = !reducedMotion && reveal > 0 && away < 1 && m < 0.05;
+      const gather = THREE.MathUtils.smoothstep(m, 0.004, 0.07);
+      const leave = THREE.MathUtils.smoothstep(m, WIND_SHARE - 0.04, WIND_SHARE + 0.14);
+      hook.visible = !reducedMotion && reveal > 0 && leave < 1;
       if (hook.visible) {
         const n = points.length - 1;
+        const t = state.clock.elapsedTime;
+
+        // At the tip of the cord (riding the name's slow wave once written).
         const i = Math.min(n, Math.floor(reveal * n));
         tangent.subVectors(points[Math.min(n, i + 2)], points[Math.max(0, i - 2)]).normalize();
+        target.copy(points[i]);
+        target.y += Math.sin(lengths[i] * 0.7 - t * 1.3) * 0.05 * w.idle;
+        target.z += Math.sin(lengths[i] * 0.9 - t * 1.6) * 0.16 * w.idle;
         // Up the handle: back along the writing, up, and out towards the viewer.
-        axis.copy(tangent).multiplyScalar(-0.5).add(HOLD).normalize();
+        tipAxis.copy(tangent).multiplyScalar(-0.5).add(HOLD).normalize();
+        // Resting, it stands more upright, clear of the edge of the screen.
+        if (reveal >= 1) tipAxis.lerp(REST_AXIS, 0.6).normalize();
+        const stitch = (lengths[i] / STITCH) % 1;
+        const writingNow = reveal < 1 ? 1 : 0;
+
+        // On the ball, over the wrap arriving now — kept to the side facing
+        // the viewer, where the work can be seen — the handle pointing up
+        // and out of it, as held.
+        const s = THREE.MathUtils.clamp((wind - 0.3) / 0.55, 0, 1 - TUCKED_END);
+        const j = Math.min(n - 1, Math.max(1, Math.round(s * n)));
+        outward.copy(ball.local[j]).applyQuaternion(roll);
+        const reach = outward.length();
+        outward.normalize();
+        outward.z = 0.45 + 0.55 * Math.abs(outward.z);
+        outward.normalize();
+        onBall.copy(centre).addScaledVector(outward, reach + 0.04);
+        wrap.subVectors(ball.local[j + 1], ball.local[j - 1]).applyQuaternion(roll).normalize();
+        const at = onBallAt.current;
+        const ease = at.set ? 1 - Math.exp(-dt * 9) : 1;
+        at.set = true;
+        at.position.lerp(onBall, ease);
+        at.axis.lerp(outward.multiplyScalar(0.6).add(HOLD).normalize(), ease).normalize();
+
+        hook.position.lerpVectors(target, at.position, gather);
+        axis.lerpVectors(tipAxis, at.axis, gather).normalize();
+        tangent.lerp(wrap, gather).normalize();
         side.copy(tangent).multiplyScalar(-1).addScaledVector(axis, tangent.dot(axis)).normalize();
         forward.crossVectors(side, axis);
         basis.makeBasis(side, axis, forward);
         targetQuat.setFromRotationMatrix(basis);
         hook.quaternion.slerp(targetQuat, 1 - Math.exp(-dt * 8));
 
-        const stitch = (lengths[i] / STITCH) % 1;
-        const dip = Math.sin(stitch * Math.PI * 2);
-        hook.position.copy(points[i]).addScaledVector(axis, 0.02 - 0.05 * Math.max(0, dip));
-        hook.position.add(awayDir.set(1.6, 1.3, 1).multiplyScalar(away * away));
-        hook.scale.setScalar((compact ? 1 : 1.35) * (1 - away * away));
-        // The yarn-over: a quick turn of the hook about its own length.
-        pose.rotation.y = Math.sin(stitch * Math.PI * 2) * 0.55;
+        // Dipping in: once per stitch while writing, once per tuck while winding.
+        const tuck = (wind * 34) % 1;
+        const dip = THREE.MathUtils.lerp(Math.sin(stitch * TAU) * writingNow, Math.sin(tuck * TAU), gather);
+        hook.position.addScaledVector(axis, 0.02 - 0.05 * Math.max(0, dip));
+        hook.position.add(awayDir.set(1.6, 1.3, 1).multiplyScalar(leave * leave * 2));
+        hook.scale.setScalar((compact ? 1 : 1.35) * (1 - leave * leave));
+        // The yarn-over: a quick turn of the hook about its own length; at
+        // rest, a small idle turn, as a hand holds it.
+        const writingTurn = writingNow ? Math.sin(stitch * TAU) * 0.55 : Math.sin(t * 1.1) * 0.14;
+        pose.rotation.y = THREE.MathUtils.lerp(writingTurn, Math.sin(tuck * TAU) * 0.55, gather);
       }
     }
   });
@@ -613,8 +707,9 @@ export function YarnWord({
     <>
       <group ref={group}>
         <mesh geometry={geometry} material={material} frustumCulled={false} />
+        {/* In the same group, so it floats with the name it rests on. */}
+        <Hook tipRef={hookRef} poseRef={poseRef} />
       </group>
-      <Hook tipRef={hookRef} poseRef={poseRef} />
     </>
   );
 }

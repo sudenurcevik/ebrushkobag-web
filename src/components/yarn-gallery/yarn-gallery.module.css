@@ -13,6 +13,200 @@
   transition: opacity 1.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* The first beat of a new season. The new sky opens as a circle from the
+   middle of the screen and, with it, the chapter — the scene blurred behind
+   a light veil and the season's name large in front. When the name has been
+   read the chapter closes the same way, a circle running back into the
+   middle, and leaves the spine and the name settled behind it. The
+   percentages follow CHAPTER's times over its 4s. */
+.chapter {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+}
+
+/* The veil and the stage the name stands on each carry the circle: set on
+   a parent instead, the clip would cut the veil's blur off from the scene
+   behind it. */
+.chapterVeil,
+.chapterStage {
+  position: absolute;
+  inset: 0;
+  animation: chapter-iris var(--chapter-length) both;
+}
+
+.chapterStage {
+  display: grid;
+  place-items: center;
+}
+
+/* Open with the sky (0–1.3s), held, closed again (2.9–4s). 78% of the
+   reference radius just reaches the far corners. */
+@keyframes chapter-iris {
+  0% {
+    clip-path: circle(0% at 50% 46%);
+    animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+  }
+  32.5% {
+    clip-path: circle(78% at 50% 46%);
+  }
+  72.5% {
+    clip-path: circle(78% at 50% 46%);
+    animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+  }
+  100% {
+    clip-path: circle(0% at 50% 46%);
+  }
+}
+
+.chapterVeil {
+  background: rgba(255, 255, 255, 0.28);
+  /* Unprefixed only: given both, the CSS compiler keeps just the -webkit-
+     one, which Chrome ignores. It adds the prefix itself where needed. */
+  backdrop-filter: blur(14px) saturate(1.1);
+}
+
+.chapterTitle {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.6rem;
+  text-align: center;
+  animation: chapter-title var(--chapter-length) cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Rises into view as the circle opens, is held, and sinks back a little as
+   the circle closes over it. */
+@keyframes chapter-title {
+  0%,
+  8% {
+    opacity: 0;
+    transform: translateY(24px) scale(1.04);
+    filter: blur(6px);
+  }
+  30% {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+  72.5% {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0.6;
+    transform: scale(0.9);
+    filter: blur(2px);
+  }
+}
+
+.chapterNumber,
+.chapterLocal {
+  font-size: clamp(0.7rem, 1.1vw, 0.95rem);
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  color: var(--chapter-rim);
+}
+
+.chapterName {
+  font-size: clamp(3rem, 12vw, 11rem);
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  background: linear-gradient(90deg, var(--chapter-rim), var(--chapter-accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  /* No outline stroke: the font's overlapping contours would show through it. */
+  filter: drop-shadow(0 6px 30px rgba(255, 255, 255, 0.8));
+}
+
+/* The closing circle's own ring of light — the opening's, run backwards. */
+.chapterRing {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.9),
+    0 0 40px 10px rgba(255, 255, 255, 0.55);
+  transform: translate(-50%, -50%);
+  animation: chapter-ring var(--chapter-length) both;
+}
+
+@keyframes chapter-ring {
+  0%,
+  72.5% {
+    width: 130vmax;
+    height: 130vmax;
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+  }
+  73% {
+    width: 130vmax;
+    height: 130vmax;
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+  }
+  100% {
+    width: 0;
+    height: 0;
+    opacity: 0.4;
+  }
+}
+
+/* With a chapter, the sky opens in step with it: the same circle, the same
+   time. */
+.skyIris {
+  animation: sky-iris var(--chapter-open) cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+
+@keyframes sky-iris {
+  from {
+    clip-path: circle(0% at 50% 46%);
+  }
+  to {
+    clip-path: circle(78% at 50% 46%);
+  }
+}
+
+.skyIrisRing {
+  animation: sky-iris-ring var(--chapter-open) cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+
+@keyframes sky-iris-ring {
+  from {
+    width: 0;
+    height: 0;
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.8;
+  }
+  to {
+    width: 130vmax;
+    height: 130vmax;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chapterVeil,
+  .chapterStage,
+  .chapterTitle {
+    animation-duration: 1.6s;
+  }
+  .chapterRing,
+  .skyIrisRing {
+    display: none;
+  }
+  .skyIris {
+    animation: none;
+  }
+}
+
 /* A new season's sky opens as a widening circle over the old one. */
 .skyReveal {
   animation: sky-reveal 2.6s cubic-bezier(0.65, 0, 0.35, 1) both;
@@ -139,9 +333,12 @@
   top: 50%;
   z-index: 5;
   transform: translateY(-50%);
-  display: flex;
-  gap: 0.9rem;
-  align-items: stretch;
+  transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.rail[data-hidden='true'] {
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* Phones: the caption already names the season, and the reel needs the width. */
@@ -151,18 +348,96 @@
   }
 }
 
-.railTrack {
+.railList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+/* One row per season: number, name and that season's own stretch of the
+   track, filling in its colours as you pass through it. */
+.railItem {
+  display: grid;
+  grid-template-columns: auto auto 3px;
+  align-items: center;
+  justify-content: end;
+  column-gap: 0.75rem;
+  width: 100%;
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(36, 26, 32, 0.4);
+  transition: color 0.5s ease;
+}
+
+.railItem:hover,
+.railItem[aria-current='step'] {
+  color: rgba(36, 26, 32, 0.92);
+}
+
+.railIndex {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  color: var(--rail-rim);
+  opacity: 0.55;
+  transition: opacity 0.5s ease;
+}
+
+.railItem[aria-current='step'] .railIndex {
+  opacity: 1;
+}
+
+.railBar {
   position: relative;
+  justify-self: center;
   width: 1px;
+  height: 3.4rem;
+  border-radius: 2px;
+  overflow: hidden;
   background: rgba(36, 26, 32, 0.12);
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.railItem[aria-current='step'] .railBar {
+  width: 3px;
 }
 
 .railFill {
   position: absolute;
   inset: 0;
-  background: #b8966a;
+  background: linear-gradient(180deg, var(--rail-rim), var(--rail-accent));
   transform-origin: top;
   transform: scaleY(0);
+}
+
+/* The front card's number, under the track. */
+.railCount {
+  margin-top: 0.9rem;
+  padding-right: calc(1.5px - 0.08em);
+  text-align: right;
+  font-size: 0.95rem;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  color: rgba(36, 26, 32, 0.92);
+}
+
+.railCount span {
+  font-size: 0.625rem;
+  color: rgba(36, 26, 32, 0.4);
+}
+
+.header {
+  transition:
+    opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.header[data-hidden='true'] {
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
 }
 
 .intro {
@@ -220,7 +495,6 @@ main[data-written='true'] .introInner .cue {
     0 0 0 1px rgba(36, 26, 32, 0.08),
     0 18px 40px -18px rgba(90, 60, 80, 0.35);
   backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   color: #241a20;
   transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -261,18 +535,6 @@ main[data-written='true'] .introInner .cue {
   50% {
     transform: translateY(4px);
   }
-}
-
-/* The season rail waits until the name is written too. */
-.afterWriting {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 1s ease 0.3s;
-}
-
-main[data-written='true'] .afterWriting {
-  opacity: 1;
-  pointer-events: auto;
 }
 
 @media (prefers-reduced-motion: reduce) {

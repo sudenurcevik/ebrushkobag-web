@@ -6,7 +6,9 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { Logo } from '@/components/brand/Logo';
 import {
+  CARDS_PER_SEASON,
   CARD_COUNT,
+  CARD_THEME,
   CHAPTER,
   DESCENT_STRETCH,
   OPENING_SKY,
@@ -18,7 +20,7 @@ import {
   introOf,
   progressForCard,
   seasonOfCard,
-  seasonBoundary,
+  descentOf,
   seasonProgress,
   type YarnCard,
 } from '@/data/yarn-gallery';
@@ -59,16 +61,15 @@ function ScrollCue({ onClick }: { onClick: () => void }) {
 
 /**
  * Crossing into a new season, the page holds still while the chapter plays
- * (see CHAPTER): the scroll is set just past the knot — so a fast flick does
- * not carry the camera on into the next cards — and wheel, touch and keys
- * are held until the title has settled behind the spine. Only going forward.
+ * (see CHAPTER): the scroll is set to the season's first card — the camera
+ * travels there while the eye is closed and the scene blurred, so it opens
+ * on that card rather than a long scroll short of it — and wheel, touch and
+ * keys are held until the title has settled behind the spine. Only going
+ * forward.
  */
 function holdAtChapter(season: number) {
   const max = document.documentElement.scrollHeight - window.innerHeight;
-  // Held at a fixed point just past the threshold (never on it, where the
-  // sky could flicker back): the start of the first card for spring, just
-  // past the knot for the others.
-  const y = Math.round((season === 0 ? progressForCard(0) : progressForCard(seasonBoundary(season) + 0.08)) * max);
+  const y = Math.round(progressForCard(season * CARDS_PER_SEASON) * max);
   // 'instant', not 'auto': the site sets scroll-behavior: smooth, which would
   // turn every correction into a glide that fights the reader's own scroll.
   window.scrollTo({ top: y, behavior: 'instant' });
@@ -92,6 +93,46 @@ function holdAtChapter(season: number) {
   };
   const timer = window.setTimeout(release, CHAPTER.settled * 1000);
   return release;
+}
+
+const TURKISH: Record<SeasonId, string> = { spring: 'İlkbahar', summer: 'Yaz', autumn: 'Sonbahar', winter: 'Kış' };
+
+/**
+ * The first beat of a new season, drawn over the scene (see CHAPTER): it
+ * opens with the new sky, as one circle from the middle of the screen — the
+ * scene blurred behind a veil, the season's name large in front — and when
+ * the name has been read it closes the same way, back into the middle, on
+ * the spine with the name now behind it (SeasonTitles) and the season's
+ * first card in front.
+ */
+function ChapterOverlay({ season }: { season: SeasonId }) {
+  const theme = CARD_THEME[season];
+  const index = YARN_SEASONS.indexOf(season);
+  return (
+    <div
+      className={styles.chapter}
+      aria-hidden
+      style={
+        {
+          '--chapter-length': `${CHAPTER.settled}s`,
+          '--chapter-rim': theme.rim,
+          '--chapter-accent': theme.accent,
+        } as React.CSSProperties
+      }
+    >
+      <div className={styles.chapterVeil} />
+      <div className={styles.chapterStage}>
+        <div className={styles.chapterTitle}>
+          <span className={styles.chapterNumber}>
+            {pad(index + 1)} / {pad(YARN_SEASONS.length)}
+          </span>
+          <span className={styles.chapterName}>{SEASON_NAME[season]}</span>
+          <span className={styles.chapterLocal}>{TURKISH[season].toLocaleUpperCase('tr-TR')}</span>
+        </div>
+      </div>
+      <div className={styles.chapterRing} />
+    </div>
+  );
 }
 
 /** Card order along the helix — the same list the scene builds. */
@@ -123,7 +164,7 @@ export function YarnGallery() {
   const [compact, setCompact] = useState<boolean | null>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
   const introRef = useRef<HTMLDivElement>(null);
-  const fillRef = useRef<HTMLDivElement>(null);
+  const fillRefs = useRef<(HTMLSpanElement | null)[]>([]);
 
   // Viewport class and motion preference, decided on the client.
   useEffect(() => {
@@ -142,7 +183,8 @@ export function YarnGallery() {
     };
   }, []);
 
-  // Intro fades as the descent starts; the rail fills with progress.
+  // Intro fades as the descent starts; each season's stretch of the rail
+  // fills as the descent passes through it.
   useEffect(() => {
     const onScroll = () => {
       const max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
@@ -152,7 +194,11 @@ export function YarnGallery() {
       // With hysteresis: spring's sky arrives at 0.75, and the opening's only
       // returns below 0.55, so the sky never flickers at the threshold.
       setOpening((was) => (was ? intro < 0.75 : intro < 0.55));
-      if (fillRef.current) fillRef.current.style.transform = `scaleY(${progress})`;
+      const position = intro < 1 ? -0.5 : descentOf(progress);
+      fillRefs.current.forEach((fill, s) => {
+        const through = Math.min(1, Math.max(0, (position - s * CARDS_PER_SEASON + 0.5) / CARDS_PER_SEASON));
+        if (fill) fill.style.transform = `scaleY(${through})`;
+      });
     };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -180,6 +226,7 @@ export function YarnGallery() {
   const sky = opening ? 'opening' : current;
   const [under, setUnder] = useState<string | null>(null);
   const [turn, setTurn] = useState(0);
+  const [chapter, setChapter] = useState<{ season: SeasonId; key: number } | null>(null);
   const lastSky = useRef(sky);
   useEffect(() => {
     if (lastSky.current === sky) return;
@@ -189,12 +236,19 @@ export function YarnGallery() {
     lastSky.current = sky;
     setTurn((t) => t + 1);
     const done = window.setTimeout(() => setUnder(null), reducedMotion ? 0 : 2700);
-    const release = forward && !jumping.current ? holdAtChapter(order(sky)) : undefined;
+    const play = forward && !jumping.current;
+    const release = play ? holdAtChapter(order(sky)) : undefined;
+    if (play) setChapter({ season: sky as SeasonId, key: Date.now() });
+    const over = play ? window.setTimeout(() => setChapter(null), CHAPTER.settled * 1000 + 200) : undefined;
     return () => {
       window.clearTimeout(done);
+      window.clearTimeout(over);
       release?.();
     };
   }, [sky, reducedMotion]);
+  // With a chapter, the sky's circle opens in step with the chapter's.
+  const withChapter = chapter?.season === sky;
+  const reveal = withChapter ? styles.skyIris : styles.skyReveal;
   const layerStyle = (id: string, background: string): React.CSSProperties => ({
     background,
     opacity: id === sky || id === under ? 1 : 0,
@@ -202,18 +256,23 @@ export function YarnGallery() {
   });
 
   return (
-    <main id="main" className={`relative text-ink ${future.className} ${future.variable}`} data-written={written}>
+    <main
+      id="main"
+      className={`relative text-ink ${future.className} ${future.variable}`}
+      data-written={written}
+      style={{ '--chapter-open': `${CHAPTER.open}s` } as React.CSSProperties}
+    >
       {/* Seasonal sky — the canvas above it is transparent. */}
       <div aria-hidden className={styles.backdrop} style={{ background: SEASON_BACKDROP.spring.fog }}>
         <div
           key={sky === 'opening' ? `opening-${turn}` : 'opening'}
-          className={`${styles.backdropLayer} ${sky === 'opening' && turn > 0 ? styles.skyReveal : ''}`}
+          className={`${styles.backdropLayer} ${sky === 'opening' && turn > 0 ? reveal : ''}`}
           style={layerStyle('opening', OPENING_SKY)}
         />
         {YARN_SEASONS.map((id) => (
           <div
             key={id === sky ? `${id}-${turn}` : id}
-            className={`${styles.backdropLayer} ${id === sky && turn > 0 ? styles.skyReveal : ''}`}
+            className={`${styles.backdropLayer} ${id === sky && turn > 0 ? reveal : ''}`}
             style={layerStyle(id, SEASON_BACKDROP[id].sky)}
           >
             {/* Summer's sun throws a few slow, faint rays. */}
@@ -221,7 +280,9 @@ export function YarnGallery() {
           </div>
         ))}
         {/* A ring of light running out along the edge of the new sky. */}
-        {turn > 0 && <div key={`ring-${turn}`} className={styles.skyRing} />}
+        {turn > 0 && (
+          <div key={`ring-${turn}`} className={`${styles.skyRing} ${withChapter ? styles.skyIrisRing : ''}`} />
+        )}
         <div className={styles.grain} />
       </div>
 
@@ -239,7 +300,12 @@ export function YarnGallery() {
       {/* The scroll track: its height is the length of the descent. */}
       <div aria-hidden style={{ height: `${Math.round(CARD_COUNT * 55 * DESCENT_STRETCH) + 180}svh` }} />
 
-      <header className="fixed inset-x-0 top-0 z-10 flex items-center justify-between gap-4 px-5 pt-5 sm:px-10 sm:pt-7">
+      {/* The opening already spells the name, so the header waits for the
+          seasons to begin. */}
+      <header
+        className={`${styles.header} fixed inset-x-0 top-0 z-10 flex items-center justify-between gap-4 px-5 pt-5 sm:px-10 sm:pt-7`}
+        data-hidden={opening}
+      >
         <Link href="/yarnGallery" className="flex shrink-0 items-center gap-3" aria-label="EBRUSHKOBAG — iplik galerisi">
           <Logo size={32} priority />
           <span className="hidden font-display text-[0.95rem] font-semibold tracking-[0.18em] sm:inline">
@@ -260,29 +326,38 @@ export function YarnGallery() {
         </div>
       </div>
 
+      {chapter && <ChapterOverlay key={chapter.key} season={chapter.season} />}
+
       <FrontAnnouncer card={CARDS[active]} />
 
       {/* Season rail: where you are on the yarn, and a way to jump. */}
-      <nav aria-label="Mevsimler" className={`${styles.rail} ${styles.afterWriting}`}>
-        <div className={styles.railTrack}>
-          <div ref={fillRef} className={styles.railFill} />
-        </div>
-        <ul className="flex flex-col justify-between gap-6 py-1">
+      {/* Like the header, it waits for the seasons to begin. */}
+      <nav aria-label="Mevsimler" className={styles.rail} data-hidden={opening}>
+        <ol className={styles.railList}>
           {YARN_SEASONS.map((id, i) => (
             <li key={id}>
               <button
                 type="button"
                 onClick={() => scrollToProgress(seasonProgress(i))}
                 aria-current={i === season ? 'step' : undefined}
-                className={`text-[0.625rem] font-medium uppercase tracking-season transition-colors duration-500 ${
-                  i === season ? 'text-ink' : 'text-ink-muted/70 hover:text-ink'
-                }`}
+                className={styles.railItem}
+                style={{ '--rail-rim': CARD_THEME[id].rim, '--rail-accent': CARD_THEME[id].accent } as React.CSSProperties}
               >
-                {SEASON_NAME[id]}
+                <span aria-hidden className={styles.railIndex}>
+                  {pad(i + 1)}
+                </span>
+                <span>{SEASON_NAME[id]}</span>
+                <span aria-hidden className={styles.railBar}>
+                  <span ref={(el) => void (fillRefs.current[i] = el)} className={styles.railFill} />
+                </span>
               </button>
             </li>
           ))}
-        </ul>
+        </ol>
+        <p aria-hidden className={styles.railCount}>
+          {pad(active + 1)}
+          <span> / {pad(CARD_COUNT)}</span>
+        </p>
       </nav>
 
       {/* The collection as text, for screen readers and anyone without WebGL. */}

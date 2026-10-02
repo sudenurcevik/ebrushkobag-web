@@ -13,4 +13,10 @@ export const reel = {
   y: 0,
   /** How fast the descent is moving, in cards per second (signed). */
   speed: 0,
+  /**
+   * When the chapter overlay's animation began (performance.now(), ms), or
+   * -1 when none is playing, and its length (s): ChapterBlur follows it.
+   */
+  chapterStart: -1,
+  chapterLength: 4,
 };

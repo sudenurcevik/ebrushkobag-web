@@ -228,7 +228,8 @@ function yarnMaterial(): THREE.MeshPhysicalMaterialParameters {
 }
 
 const fluffy: THREE.MeshPhysicalMaterialParameters = { roughness: 1, sheen: 1, sheenColor: new THREE.Color('#FFFFFF'), sheenRoughness: 0.35 };
-const glossy: THREE.MeshPhysicalMaterialParameters = { roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.08 };
+// Glossy without a clearcoat: each extra shader variant costs a long compile.
+const glossy: THREE.MeshPhysicalMaterialParameters = { roughness: 0.14 };
 
 const pompomPart = (colors: string[]): GarlandPart => ({
   geometry: pompom(),
@@ -286,7 +287,7 @@ export function garlandKit(season: SeasonId): GarlandKit {
           },
           pompomPart(['#E8A33D', '#B8472A', '#9C4A6E']),
           ballPart(['#6B4029', '#B8672F', '#D08A4A']),
-          beadPart(['#8A5A36', '#B8743F', '#5B3524'], { roughness: 0.45, clearcoat: 0.6 }),
+          beadPart(['#8A5A36', '#B8743F', '#5B3524'], { roughness: 0.35 }),
         ],
       };
     case 'winter':

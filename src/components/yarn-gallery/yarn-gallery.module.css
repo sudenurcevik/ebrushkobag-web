@@ -26,9 +26,7 @@
   pointer-events: none;
 }
 
-/* The veil and the stage the name stands on each carry the circle: set on
-   a parent instead, the clip would cut the veil's blur off from the scene
-   behind it. */
+/* The veil and the stage the name stands on each carry the circle. */
 .chapterVeil,
 .chapterStage {
   position: absolute;
@@ -61,10 +59,9 @@
 }
 
 .chapterVeil {
+  /* Only a light wash: the blur under it is the scene's own (ChapterBlur) —
+     a backdrop-filter here would re-blur the whole screen every frame. */
   background: rgba(255, 255, 255, 0.28);
-  /* Unprefixed only: given both, the CSS compiler keeps just the -webkit-
-     one, which Chrome ignores. It adds the prefix itself where needed. */
-  backdrop-filter: blur(14px) saturate(1.1);
 }
 
 .chapterTitle {

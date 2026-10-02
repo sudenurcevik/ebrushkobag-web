@@ -25,6 +25,7 @@ import {
   type YarnCard,
 } from '@/data/yarn-gallery';
 import type { SeasonId } from '@/data/types';
+import { reel } from './reel';
 import styles from './yarn-gallery.module.css';
 
 /**
@@ -105,9 +106,12 @@ const TURKISH: Record<SeasonId, string> = { spring: 'İlkbahar', summer: 'Yaz', 
  * the spine with the name now behind it (SeasonTitles) and the season's
  * first card in front.
  */
-function ChapterOverlay({ season }: { season: SeasonId }) {
+function ChapterOverlay({ season, reducedMotion }: { season: SeasonId; reducedMotion: boolean }) {
   const theme = CARD_THEME[season];
   const index = YARN_SEASONS.indexOf(season);
+  // The scene blurs itself inside the same circle (ChapterBlur), so it is
+  // told when the circle starts and how long it runs.
+  useEffect(() => () => void (reel.chapterStart = -1), []);
   return (
     <div
       className={styles.chapter}
@@ -120,7 +124,13 @@ function ChapterOverlay({ season }: { season: SeasonId }) {
         } as React.CSSProperties
       }
     >
-      <div className={styles.chapterVeil} />
+      <div
+        className={styles.chapterVeil}
+        onAnimationStart={() => {
+          reel.chapterStart = performance.now();
+          reel.chapterLength = reducedMotion ? 1.6 : CHAPTER.settled;
+        }}
+      />
       <div className={styles.chapterStage}>
         <div className={styles.chapterTitle}>
           <span className={styles.chapterNumber}>
@@ -326,7 +336,7 @@ export function YarnGallery() {
         </div>
       </div>
 
-      {chapter && <ChapterOverlay key={chapter.key} season={chapter.season} />}
+      {chapter && <ChapterOverlay key={chapter.key} season={chapter.season} reducedMotion={reducedMotion} />}
 
       <FrontAnnouncer card={CARDS[active]} />
 

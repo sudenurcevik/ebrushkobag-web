@@ -46,6 +46,7 @@ const fragmentShader = /* glsl */ `
   #include <fog_pars_fragment>
   uniform sampler2D uFace;
   uniform sampler2D uMap;
+  uniform sampler2D uBlur; // the photograph, blurred once on the CPU (see blurredPhoto)
   uniform float uHasFace;
   uniform vec2 uSize;
   uniform float uImageAspect;
@@ -101,30 +102,17 @@ const fragmentShader = /* glsl */ `
     float along = wide ? local.x : 1.0 - local.y;
     float inPhoto = 1.0 - smoothstep(0.9, 1.0, along);
     vec3 sharp = texture2D(uMap, clamp(sharpUv, 0.0, 1.0)).rgb;
-    vec3 bleed = vec3(0.0);
-    for (int i = 0; i < 10; i++) {
-      float fi = float(i);
-      float a = fi * 2.39996;
-      float r = 0.08 + 0.14 * sqrt(fi / 10.0);
-      bleed += texture2D(uMap, (uv - 0.5) * cover * 0.6 + 0.5 + vec2(cos(a), sin(a)) * r * cover).rgb;
-    }
-    bleed = mix(bleed / 10.0, uGlass, 0.25);
+    // Blurred further still by reading a smaller mip.
+    vec3 bleed = mix(texture2D(uBlur, (uv - 0.5) * cover * 0.6 + 0.5, 2.5).rgb, uGlass, 0.25);
     vec3 photo = mix(bleed, sharp, inPhoto);
 
-    // The glass panel: the photograph behind it, frosted (a spiral of taps),
-    // washed with the season's glass colour, with a faint knitting chart.
+    // The glass panel: the photograph behind it, frosted, washed with the
+    // season's glass colour, with a faint knitting chart.
     vec2 pc = (uPanel.xy + uPanel.zw) * 0.5;
     vec2 ph = (uPanel.zw - uPanel.xy) * 0.5;
     float dPanel = sdRoundBox((uv - pc) * uSize, ph * uSize, 0.03 * minSize);
     float inPanel = 1.0 - smoothstep(-aa, aa, dPanel);
-    vec3 frost = vec3(0.0);
-    for (int i = 0; i < 14; i++) {
-      float fi = float(i);
-      float a = fi * 2.39996;
-      float r = 0.012 + 0.055 * sqrt(fi / 14.0);
-      frost += texture2D(uMap, photoUv + vec2(cos(a), sin(a)) * r * cover).rgb;
-    }
-    frost /= 14.0;
+    vec3 frost = texture2D(uBlur, photoUv).rgb;
     vec3 glass = mix(frost, uGlass, 0.66) + 0.05;
     vec2 cell = mod(p / (0.055 * minSize), 1.0) - 0.5;
     float chart = max(step(abs(cell.x), 0.035) * step(abs(cell.y), 0.16), step(abs(cell.y), 0.035) * step(abs(cell.x), 0.16));
@@ -203,6 +191,7 @@ const tiltEuler = new THREE.Euler();
 export function YarnCard({
   card,
   texture,
+  blurred,
   face,
   pageColor,
   reducedMotion,
@@ -210,6 +199,8 @@ export function YarnCard({
 }: {
   card: Card;
   texture: THREE.Texture;
+  /** The same photograph, blurred: the glass panel's frost and the card's colour. */
+  blurred: THREE.Texture;
   /** The painted face; null until the fonts are ready. */
   face: THREE.Texture | null;
   /** The sky behind, which far cards fade towards. */
@@ -240,6 +231,7 @@ export function YarnCard({
           {
             uFace: { value: null },
             uMap: { value: null },
+            uBlur: { value: null },
             uHasFace: { value: 0 },
             uSize: { value: new THREE.Vector2(card.width, card.height) },
             uImageAspect: { value: IMAGE_ASPECT },
@@ -268,6 +260,7 @@ export function YarnCard({
 
   const u = material.uniforms;
   u.uMap.value = texture;
+  u.uBlur.value = blurred;
   u.uFace.value = face;
   u.uHasFace.value = face ? 1 : 0;
   u.uPage.value = pageColor;

@@ -2,7 +2,7 @@
 
 import { Environment, Lightformer, useProgress, useTexture } from '@react-three/drei';
 import { Canvas, useThree } from '@react-three/fiber';
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import {
   CARD_THEME,
@@ -13,6 +13,7 @@ import {
   type YarnCard as Card,
 } from '@/data/yarn-gallery';
 import { CameraRig } from './CameraRig';
+import { ChapterBlur } from './ChapterBlur';
 import { cardFonts, paintCardFace } from './cardFace';
 import { SatinBackdrop } from './SatinBackdrop';
 import { SeasonGates, SeasonRing, SeasonSwirl } from './SeasonEffects';
@@ -32,6 +33,31 @@ import styles from './yarn-gallery.module.css';
 const PHOTO_URLS = YARN_PHOTOS.map((p) => p.image);
 const faceKey = (card: Card) => `${card.photo.id}|${card.season}`;
 useTexture.preload(PHOTO_URLS);
+
+/**
+ * A photograph blurred once, small, on the CPU — so the cards' frosted glass
+ * and colour wash cost one texture read a pixel instead of a ring of them.
+ * Halving it down a few times and back up again blurs it smoothly in any
+ * browser (canvas filters are not everywhere).
+ */
+function blurredPhoto(image: CanvasImageSource & { width: number; height: number }) {
+  const size = 96;
+  const aspect = image.width / image.height;
+  const step = (source: CanvasImageSource, w: number) => {
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(w));
+    c.height = Math.max(1, Math.round(w / aspect));
+    const ctx = c.getContext('2d')!;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(source, 0, 0, c.width, c.height);
+    return c;
+  };
+  let canvas = step(image, size);
+  for (const w of [size / 2, size / 4, size / 2, size]) canvas = step(canvas, w);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
 
 function Cards({
   compact,
@@ -56,6 +82,13 @@ function Cards({
     });
     return map;
   }, [textures]);
+
+  const blurById = useMemo(() => {
+    const map = new Map<string, THREE.Texture>();
+    byId.forEach((t, id) => map.set(id, blurredPhoto(t.image as HTMLImageElement)));
+    return map;
+  }, [byId]);
+  useEffect(() => () => blurById.forEach((t) => t.dispose()), [blurById]);
 
   // Info card faces, painted once the site's fonts can be drawn to canvas.
   // Until then the cards show just their photographs.
@@ -97,6 +130,7 @@ function Cards({
           key={card.key}
           card={card}
           texture={byId.get(card.photo.id)!}
+          blurred={blurById.get(card.photo.id)!}
           face={faces?.get(faceKey(card)) ?? null}
           pageColor={pageColor}
           reducedMotion={reducedMotion}
@@ -107,10 +141,65 @@ function Cards({
   );
 }
 
-function Loader() {
+/**
+ * Readies the whole scene before its first frame, so nothing is built while
+ * you watch: the frame loop is held (see YarnScene) until the fonts the card
+ * faces and titles need are in, every texture is on the GPU and every
+ * shader is compiled — off the main thread where the browser can, and for
+ * the hidden objects too (titles, season effects), which would otherwise
+ * stall the descent the first time they appear.
+ */
+function Prewarm({ onReady }: { onReady: () => void }) {
+  const { gl, scene, camera } = useThree();
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      await cardFonts();
+      // Let the faces and titles painted with those fonts mount.
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      if (cancelled) return;
+      const hidden: THREE.Object3D[] = [];
+      scene.traverse((object) => {
+        if (!object.visible) {
+          hidden.push(object);
+          object.visible = true;
+        }
+        const materials = (object as THREE.Mesh).material;
+        for (const material of Array.isArray(materials) ? materials : materials ? [materials] : []) {
+          const slots = [...Object.values(material), ...Object.values((material as THREE.ShaderMaterial).uniforms ?? {}).map((u) => u?.value)];
+          for (const value of slots) if (value instanceof THREE.Texture) gl.initTexture(value);
+        }
+      });
+      await gl.compileAsync(scene, camera);
+      // And draw it all once — out of view and unculled — behind the loader.
+      // A shader is only truly finished by its first draw (with Metal, say),
+      // and that can take a second or more: here it costs loading time
+      // instead of a stall in the middle of the scroll.
+      const culled: THREE.Object3D[] = [];
+      scene.traverse((object) => {
+        if (object.frustumCulled) {
+          culled.push(object);
+          object.frustumCulled = false;
+        }
+      });
+      gl.render(scene, camera);
+      culled.forEach((object) => (object.frustumCulled = true));
+      hidden.forEach((object) => (object.visible = false));
+      // Let the GPU finish that frame before the page counts as ready.
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      if (!cancelled) onReady();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [gl, scene, camera, onReady]);
+  return null;
+}
+
+function Loader({ ready }: { ready: boolean }) {
   const { active, progress } = useProgress();
   return (
-    <div className={styles.loader} data-done={!active && progress === 100} aria-hidden>
+    <div className={styles.loader} data-done={ready && !active && progress === 100} aria-hidden>
       <span>{Math.round(progress)}%</span>
     </div>
   );
@@ -130,11 +219,18 @@ export default function YarnScene({
   /** Called once, when the hook has finished writing the name. */
   onWritten: () => void;
 }) {
+  const [ready, setReady] = useState(false);
+  const onReady = useCallback(() => setReady(true), []);
   return (
     <>
       <Canvas
         className={styles.canvas}
-        dpr={[1, 1.75]}
+        // Held until Prewarm has the scene ready.
+        frameloop={ready ? 'always' : 'never'}
+        // Capped at 1.5: on a retina screen the step up to 2 nearly doubles
+        // the pixels to shade for little the eye can see. (Not adapted on
+        // the fly: resizing the canvas mid-scroll stalls for a second.)
+        dpr={[1, 1.5]}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         camera={{
           fov: compact ? 52 : 40,
@@ -165,6 +261,7 @@ export default function YarnScene({
           <Lightformer form="rect" intensity={1} position={[0, 2, -6]} rotation-y={Math.PI} scale={[10, 4, 1]} color="#FFF3E8" />
         </Environment>
 
+        <ChapterBlur />
         <CameraRig compact={compact} reducedMotion={reducedMotion} onActive={onActive} />
         <Yarn compact={compact} reducedMotion={reducedMotion} />
         <SatinBackdrop reducedMotion={reducedMotion} />
@@ -175,9 +272,10 @@ export default function YarnScene({
         <SeasonTitles compact={compact} />
         <Suspense fallback={null}>
           <Cards compact={compact} reducedMotion={reducedMotion} onSelect={onSelect} />
+          <Prewarm onReady={onReady} />
         </Suspense>
       </Canvas>
-      <Loader />
+      <Loader ready={ready} />
     </>
   );
 }

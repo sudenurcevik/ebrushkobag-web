@@ -406,7 +406,7 @@ function Hook({ tipRef, poseRef }: { tipRef: React.RefObject<THREE.Group | null>
           </mesh>
         ))}
         <mesh geometry={hook.handle}>
-          <meshPhysicalMaterial color="#F7B8D8" roughness={0.5} sheen={0.7} sheenColor="#FFE6F3" clearcoat={0.4} />
+          <meshPhysicalMaterial color="#F7B8D8" roughness={0.4} sheen={0.7} sheenColor="#FFE6F3" />
         </mesh>
         <mesh geometry={hook.band}>
           <meshStandardMaterial color="#D8B878" metalness={1} roughness={0.25} />
